@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+openai
+python-dotenv
+python-multipart
+Pillow
+slowapi
+pymongo[srv]
+certifi

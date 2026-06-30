@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "visadream",
+      "runtimeExecutable": "/Users/claudiodamasco/Documents/www/visadream/venv/bin/python",
+      "runtimeArgs": ["main.py"],
+      "port": 8002,
+      "autoPort": false
+    }
+  ]
+}

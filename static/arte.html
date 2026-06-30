@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sua arte — VisaDream · D4U</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root { --navy: #1e2a44; --gold: #d0b121; }
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #1e2a44; color: #f0f4ff; }
+  .gradient-bg {
+    background: radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.05) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 20%, rgba(208,177,33,0.06) 0%, transparent 50%),
+                #1e2a44;
+  }
+  .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(20px); }
+  .btn-primary {
+    background: var(--gold); color: var(--navy); font-weight: 700;
+    transition: transform 0.25s, box-shadow 0.25s, filter 0.2s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(208,177,33,0.4); filter: brightness(1.05); }
+
+  /* Moldura 9:16 da arte */
+  .art-frame {
+    position: relative; width: 100%; max-width: 320px; margin: 0 auto;
+    aspect-ratio: 9 / 16; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 0 60px rgba(208,177,33,0.25), 0 0 120px rgba(255,255,255,0.06);
+    background: #ffffff;
+  }
+  #gen-canvas { width: 100%; height: 100%; display: block; }
+  .gen-overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end; padding: 22px;
+    background: linear-gradient(transparent 38%, rgba(255,255,255,0.96));
+    color: var(--navy); text-align: center; pointer-events: none;
+  }
+  .art-final {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    opacity: 0; filter: blur(22px); transform: scale(1.04);
+    transition: opacity 1.1s ease, filter 1.4s ease, transform 1.4s ease;
+  }
+  .art-final.show { opacity: 1; filter: blur(0); transform: scale(1); }
+
+  @keyframes pulse-soft { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+  .pulse-soft { animation: pulse-soft 1.6s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 1s linear infinite; }
+  .star { position: absolute; border-radius: 50%; background: #fff; }
+
+  @media (prefers-reduced-motion: reduce) { .pulse-soft, .spinner { animation: none; } }
+
+  /* Celular: encolhe o quadro e os espaçamentos pra tudo caber na tela */
+  @media (max-width: 640px) {
+    header { padding-top: 12px; padding-bottom: 6px; }
+    #view-main { padding-top: 0 !important; }
+    #view-main > div:first-child { margin-bottom: 1rem !important; }
+    #r-titulo { font-size: 1.5rem; line-height: 1.2; }
+    #view-main .card { padding: 1rem !important; }
+    #r-mensagem { font-size: 0.9rem; }
+    .art-frame { max-width: 180px; margin-bottom: 0.75rem !important; }
+    main { padding-bottom: 2rem !important; }
+  }
+</style>
+</head>
+<body class="gradient-bg min-h-screen">
+
+<div id="stars" class="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true"></div>
+
+<header class="relative z-10 px-6 py-5 max-w-3xl mx-auto">
+  <img src="/static/d4u-logo.png" alt="D4U Immigration" class="h-11 w-auto"/>
+</header>
+
+<main class="relative z-10 max-w-xl mx-auto px-6 pb-20">
+
+  <!-- Estado: carregando token -->
+  <div id="view-loading" class="text-center pt-16">
+    <div class="w-10 h-10 rounded-full border-2 spinner mx-auto" style="border-color:var(--gold)"></div>
+    <p class="text-gray-300 mt-4">Carregando…</p>
+  </div>
+
+  <!-- Estado: erro / link inválido -->
+  <div id="view-error" class="hidden text-center pt-16">
+    <div class="text-5xl mb-4" aria-hidden="true">🔒</div>
+    <h1 class="text-2xl font-bold mb-2">Link inválido ou expirado</h1>
+    <p class="text-gray-300">Refaça o questionário para gerar um novo acesso.</p>
+    <a href="/" class="btn-primary inline-block px-8 py-3 rounded-xl mt-6">Voltar ao início</a>
+  </div>
+
+  <!-- Estado: resultado + arte -->
+  <div id="view-main" class="hidden pt-4">
+    <div class="text-center mb-8">
+      <p class="font-semibold text-sm mb-2 uppercase tracking-widest" style="color:var(--gold)">Seu resultado</p>
+      <h1 class="text-3xl font-bold" id="r-titulo">—</h1>
+    </div>
+
+    <div class="card rounded-2xl p-6 mb-6 text-center">
+      <p class="text-gray-100 leading-relaxed" id="r-mensagem"></p>
+    </div>
+
+    <!-- Bloco da arte -->
+    <div id="art-block">
+      <div class="art-frame mb-4">
+        <canvas id="gen-canvas" width="270" height="480" aria-hidden="true"></canvas>
+        <img id="art-final" class="art-final" alt="Sua arte personalizada"/>
+        <div class="gen-overlay" id="gen-overlay">
+          <p class="font-semibold pulse-soft" style="color:var(--navy)">✨ Sua arte está sendo gerada…</p>
+          <p class="text-sm mt-1" style="color:rgba(30,42,68,0.7)">Estamos pintando cada detalhe do seu sonho. Volte a esta tela em instantes!</p>
+        </div>
+      </div>
+
+      <div id="art-done" class="hidden text-center">
+        <a id="download-btn" href="#" download="minha-arte-d4u.png" class="btn-primary inline-block px-8 py-3 rounded-xl">⬇️ Baixar minha arte</a>
+        <p class="text-gray-400 text-xs mt-3">Guarde este link — você pode voltar aqui quando quiser para baixar sua arte.</p>
+      </div>
+
+      <div id="art-failed" class="hidden card rounded-2xl p-5 text-center">
+        <p class="text-gray-200 text-sm">Não foi possível gerar sua arte agora. Nossa equipe já está com seus dados e vai te ajudar. 💛</p>
+      </div>
+    </div>
+
+    <!-- CTA D4U -->
+    <div class="card rounded-2xl p-6 text-center mt-6" style="border:1px solid rgba(208,177,33,0.4); background: rgba(208,177,33,0.08)">
+      <p class="text-lg font-semibold mb-2">Quer transformar esse sonho em realidade? 🚀</p>
+      <p class="text-gray-300 text-sm mb-5">A D4U Immigration tem 91% de taxa de sucesso e garantia de devolução do dinheiro.</p>
+      <a href="https://www.d4uimmigration.com" target="_blank" rel="noopener" class="btn-primary inline-block px-8 py-3 rounded-xl">Falar com especialista →</a>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Stars ──────────────────────────────────────────────────────────
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 80; i++) {
+  const s = document.createElement('div'); s.className = 'star';
+  const sz = Math.random() * 2.2;
+  Object.assign(s.style, { width: sz+'px', height: sz+'px', left: Math.random()*100+'%', top: Math.random()*100+'%', opacity: Math.random()*0.5+0.1 });
+  starsEl.appendChild(s);
+}
+
+const token = new URLSearchParams(location.search).get('token');
+
+// ── Animação de "processando": campo de pixels que pisca em transição lenta ──
+// Cada pixel some/aparece numa onda suave (sine) com fase própria → cintilação
+// lenta, contínua, até a arte chegar. Tons de azul + dourado esparso.
+let _raf = null;
+function startMosaic() {
+  const cv = document.getElementById('gen-canvas');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gap = 9;
+  const MAXINT = 2.6;
+  const colors = ['#33446b','#3d5180','#4a5d8a','#2b3a5e','#5a6b94','#d0b121','#33446b','#3d5180'];
+
+  const pixels = [];
+  for (let x = 0; x < W; x += gap) {
+    for (let y = 0; y < H; y += gap) {
+      pixels.push({
+        x, y,
+        color: colors[(Math.random() * colors.length) | 0],
+        max: 1.1 + Math.random() * 1.4,          // tamanho máx do pixel
+        phase: Math.random() * Math.PI * 2,       // fase aleatória (cada um pisca num momento)
+        freq: reduce ? 0 : (1.2 + Math.random() * 1.5), // velocidade do pisca (lento)
+      });
+    }
+  }
+
+  const t0 = performance.now();
+  let tPrev = t0;
+  const tInt = 1000 / 60;
+  function frame() {
+    _raf = requestAnimationFrame(frame);
+    const now = performance.now();
+    if (now - tPrev < tInt) return;
+    tPrev = now;
+    const t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of pixels) {
+      // k vai de 0 (apagado) a 1 (aceso) suavemente → "pisca" lento
+      const k = p.freq ? (0.5 + 0.5 * Math.sin(p.phase + t * p.freq)) : 0.85;
+      const size = p.max * k;
+      const o = MAXINT * 0.5 - size * 0.5;
+      ctx.globalAlpha = 0.1 + 0.9 * k;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x + o, p.y + o, size, size);
+    }
+    ctx.globalAlpha = 1;
+  }
+  frame();
+}
+function stopMosaic() { if (_raf) { cancelAnimationFrame(_raf); _raf = null; } }
+
+// ── Render dos estados ──────────────────────────────────────────────
+function show(id) { ['view-loading','view-error','view-main'].forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id)); }
+
+function renderAnalysis(d) {
+  const nome = d.nome || '';
+  document.getElementById('r-titulo').textContent =
+    d.elegivel ? `${nome}, você tem perfil! 🎉` : `${nome}, recebemos seus dados! 🙌`;
+  document.getElementById('r-mensagem').textContent = d.elegivel
+    ? (d.mensagem || 'Você tem perfil para realizar o seu sonho americano!')
+    : 'Estamos com os seus dados e em breve alguém da nossa equipe da D4U vai entrar em contato com você. 💛';
+}
+
+let revealed = false;
+function revealArt(url) {
+  if (revealed) return; revealed = true;
+  stopMosaic();
+  const img = document.getElementById('art-final');
+  img.onload = () => {
+    img.classList.add('show');
+    document.getElementById('gen-overlay').style.display = 'none';
+    const dl = document.getElementById('download-btn');
+    dl.href = url;
+    document.getElementById('art-done').classList.remove('hidden');
+  };
+  img.src = url;
+}
+
+function showNoArt() {
+  // Sem foto enviada: esconde o bloco de arte por completo.
+  document.getElementById('art-block').classList.add('hidden');
+}
+
+function showFailed() {
+  stopMosaic();
+  document.querySelector('.art-frame').classList.add('hidden');
+  document.getElementById('art-failed').classList.remove('hidden');
+}
+
+// ── Polling do status ───────────────────────────────────────────────
+let started = false;
+async function poll() {
+  try {
+    const r = await fetch('/api/art-status?token=' + encodeURIComponent(token));
+    if (r.status === 404) { show('view-error'); return; }
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json();
+
+    if (!started) {
+      started = true;
+      renderAnalysis(d);
+      show('view-main');
+      if (d.status === 'processing') startMosaic();
+    }
+
+    if (d.status === 'done') {
+      if (d.art_url) revealArt(d.art_url); else showNoArt();
+      return; // para o polling
+    }
+    if (d.status === 'failed') { showFailed(); return; }
+
+    setTimeout(poll, 4000); // continua aguardando
+  } catch (e) {
+    setTimeout(poll, 5000);
+  }
+}
+
+if (!token) { show('view-error'); } else { poll(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Segredos e configuração — NUNCA versionar
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dados pessoais (PII) e conteúdo gerado
+leads.json
+uploads/
+static/results/
+
+# Ambiente Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# SO / editor
+.DS_Store
+.vscode/
+.idea/

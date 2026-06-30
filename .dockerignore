@@ -1,0 +1,23 @@
+# Segredos e dados — nunca entram na imagem
+.env
+.env.*
+*.pem
+*.key
+leads.json
+
+# Conteúdo gerado / uploads (efêmeros; vão pro Storage depois)
+uploads/
+static/results/
+
+# Ambiente e caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Git / editor / SO
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
