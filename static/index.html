@@ -360,6 +360,9 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Qual é o seu sonho? Toque numa ideia:</label>
           <div class="flex flex-col gap-2" id="dream-chips" aria-label="Sugestões de sonho"></div>
+          <div id="sonho-outro-wrap" class="hidden mt-3">
+            <input type="text" id="sonho-outro" placeholder="Conte seu sonho com suas palavras" class="w-full rounded-xl px-4 py-3 text-base" oninput="form.sonho_outro=this.value.trim()"/>
+          </div>
         </div>
 
         <div>
@@ -534,7 +537,7 @@ const form = {
   motivo_viagem: '', duracao_viagem: '', historico_visto: '',
   negocio_tipo: '', capital: '', ja_empresa: '',
   investimento: '', tipo_investimento: '',
-  cidade: '', cidade_outro: '', sonho: '',
+  cidade: '', cidade_outro: '', sonho: '', sonho_outro: '',
   nome: '', sobrenome: '', email: '', whatsapp: '', nascimento: ''
 };
 let photoFile = null;
@@ -680,6 +683,11 @@ function buildBranch(interesse) {
 function buildDreamChips(interesse) {
   const wrap = document.getElementById('dream-chips');
   wrap.innerHTML = '';
+  document.getElementById('sonho-outro-wrap')?.classList.add('hidden');
+  const so = document.getElementById('sonho-outro'); if (so) so.value = '';
+  form.sonho = '';
+  form.sonho_outro = '';
+
   (dreamSuggestions[interesse] || []).forEach(text => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -689,10 +697,27 @@ function buildDreamChips(interesse) {
       wrap.querySelectorAll('button').forEach(x => x.classList.remove('selected'));
       b.classList.add('selected');
       form.sonho = text;
+      form.sonho_outro = '';
+      document.getElementById('sonho-outro-wrap')?.classList.add('hidden');
+      const inp = document.getElementById('sonho-outro'); if (inp) inp.value = '';
       clearErr('err-3');
     };
     wrap.appendChild(b);
   });
+
+  const outro = document.createElement('button');
+  outro.type = 'button';
+  outro.className = 'option-btn rounded-xl px-4 py-3 text-sm text-left';
+  outro.textContent = '✨ Outro';
+  outro.onclick = () => {
+    wrap.querySelectorAll('button').forEach(x => x.classList.remove('selected'));
+    outro.classList.add('selected');
+    form.sonho = 'Outro';
+    document.getElementById('sonho-outro-wrap')?.classList.remove('hidden');
+    document.getElementById('sonho-outro')?.focus();
+    clearErr('err-3');
+  };
+  wrap.appendChild(outro);
 }
 
 // ── Validators ─────────────────────────────────────────────────────
@@ -718,7 +743,13 @@ function nextFrom3() {
     if (!txt) return showErr('err-3', 'Informe a cidade em "Outro".', document.getElementById('cidade-outro'));
     form.cidade_outro = txt;
   }
-  if (!form.sonho)  return showErr('err-3', 'Toque numa ideia de sonho.');
+  if (!form.sonho) return showErr('err-3', 'Toque numa ideia de sonho ou escolha Outro.');
+  if (form.sonho === 'Outro') {
+    const txt = (document.getElementById('sonho-outro')?.value || '').trim();
+    if (!txt) return showErr('err-3', 'Conte seu sonho em "Outro".', document.getElementById('sonho-outro'));
+    form.sonho_outro = txt;
+    form.sonho = txt;
+  }
   goStep(4); // foto é opcional
 }
 
@@ -830,6 +861,8 @@ function restart() {
   document.getElementById('photo-empty').classList.remove('hidden');
   document.querySelectorAll('.option-btn, .interest-card').forEach(b => { b.classList.remove('selected'); if (b.getAttribute('role')==='radio') b.setAttribute('aria-checked','false'); });
   document.getElementById('dream-chips').innerHTML = '';
+  document.getElementById('sonho-outro-wrap')?.classList.add('hidden');
+  const so = document.getElementById('sonho-outro'); if (so) so.value = '';
   document.getElementById('formacao-outro-wrap')?.classList.add('hidden');
   document.getElementById('cidade-outro-wrap')?.classList.add('hidden');
   const fo = document.getElementById('formacao-outro'); if (fo) fo.value = '';
