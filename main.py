@@ -13,7 +13,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Request, Body
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -87,6 +87,8 @@ MONGODB_DB = os.environ.get("MONGODB_DB", "visadream")
 MONGO_ENABLED = bool(MONGODB_URI)
 HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip().strip('"').strip("'")
+if ADMIN_PASSWORD:
+    print(f"[admin] ADMIN_PASSWORD configurado (len={len(ADMIN_PASSWORD)})")
 
 CSV_COLUMNS = [
     "created_at", "nome", "sobrenome", "email", "whatsapp", "nascimento",
@@ -768,7 +770,7 @@ def leads_to_csv(leads: list[dict]) -> str:
 @app.get("/api/admin/status")
 async def admin_status():
     """Indica se o painel está configurado (sem expor a senha)."""
-    return JSONResponse({"configured": bool(ADMIN_PASSWORD)})
+    return JSONResponse({"configured": bool(ADMIN_PASSWORD), "password_len": len(ADMIN_PASSWORD) if ADMIN_PASSWORD else 0})
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -776,6 +778,18 @@ async def admin_page():
     if not ADMIN_PASSWORD:
         raise HTTPException(503, "Painel admin não configurado (defina ADMIN_PASSWORD).")
     return Path("static/admin.html").read_text(encoding="utf-8")
+
+
+@app.post("/api/admin/login")
+@limiter.limit("20/minute")
+async def admin_login(request: Request, body: dict = Body(...)):
+    """Valida a senha (POST evita problemas com caracteres especiais no header)."""
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado.")
+    pwd = str(body.get("password", "")).strip()
+    if not pwd or not secrets.compare_digest(pwd, ADMIN_PASSWORD):
+        raise HTTPException(401, "Senha incorreta.")
+    return JSONResponse({"ok": True})
 
 
 @app.get("/api/admin/leads")
