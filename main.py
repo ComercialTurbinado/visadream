@@ -1,12 +1,13 @@
 import os
 import io
+import csv
 import uuid
 import json
 import base64
 import secrets
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 import urllib.request
 import urllib.parse
@@ -85,6 +86,16 @@ MONGODB_URI = os.environ.get("MONGODB_URI", "")
 MONGODB_DB = os.environ.get("MONGODB_DB", "visadream")
 MONGO_ENABLED = bool(MONGODB_URI)
 HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+
+CSV_COLUMNS = [
+    "created_at", "nome", "sobrenome", "email", "whatsapp", "nascimento",
+    "interesse", "area", "formacao", "experiencia", "familia",
+    "negocio_tipo", "capital", "ja_empresa", "investimento", "tipo_investimento",
+    "cidade", "sonho", "visto_principal", "visto_secundario", "probabilidade",
+    "elegivel", "motivo_principal", "mensagem_sonho", "pontos_fortes", "pontos_atencao",
+    "art_status", "art_url", "token",
+]
 
 _mongo_db = None
 _mongo_fs = None
@@ -237,7 +248,7 @@ def build_interest_section(data: dict) -> str:
 
 
 def save_lead(data: dict, result: dict) -> None:
-    """Grava o lead no Supabase (se configurado) ou no leads.json local. Nunca quebra a análise."""
+    """Grava o lead no MongoDB (se configurado) ou no leads.json local. Nunca quebra a análise."""
     lead = {
         "token": data.get("token", ""),
         "nome": data.get("nome", ""),
@@ -246,11 +257,25 @@ def save_lead(data: dict, result: dict) -> None:
         "whatsapp": data.get("whatsapp", ""),
         "nascimento": data.get("nascimento", ""),
         "interesse": data.get("interesse", ""),
+        "area": data.get("area", ""),
+        "formacao": data.get("formacao", ""),
+        "experiencia": data.get("experiencia", ""),
+        "familia": data.get("familia", ""),
+        "negocio_tipo": data.get("negocio_tipo", ""),
+        "capital": data.get("capital", ""),
+        "ja_empresa": data.get("ja_empresa", ""),
+        "investimento": data.get("investimento", ""),
+        "tipo_investimento": data.get("tipo_investimento", ""),
         "cidade": data.get("cidade", ""),
         "sonho": data.get("sonho", ""),
         "visto_principal": result.get("visto_principal", ""),
+        "visto_secundario": result.get("visto_secundario") or "",
         "probabilidade": result.get("probabilidade", ""),
         "elegivel": result.get("elegivel", None),
+        "motivo_principal": result.get("motivo_principal", ""),
+        "mensagem_sonho": result.get("mensagem_sonho", ""),
+        "pontos_fortes": result.get("pontos_fortes") or [],
+        "pontos_atencao": result.get("pontos_atencao") or [],
     }
 
     if MONGO_ENABLED:
@@ -645,6 +670,132 @@ async def arte_page():
     return Path("static/arte.html").read_text(encoding="utf-8")
 
 
+# ── Admin (dashboard de leads) ────────────────────────────────────────────────
+
+def verify_admin(request: Request) -> bool:
+    """Autenticação simples via Bearer token (= ADMIN_PASSWORD)."""
+    if not ADMIN_PASSWORD:
+        return False
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return secrets.compare_digest(auth[7:], ADMIN_PASSWORD)
+    return False
+
+
+def _lead_created_at(lead: dict) -> datetime:
+    if isinstance(lead.get("created_at"), datetime):
+        return lead["created_at"]
+    ts = lead.get("timestamp", "")
+    if ts:
+        try:
+            return datetime.fromisoformat(ts)
+        except ValueError:
+            pass
+    return datetime.min
+
+
+def _serialize_value(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.isoformat(timespec="seconds")
+    if isinstance(value, list):
+        return [_serialize_value(v) for v in value]
+    return value
+
+
+def enrich_lead_with_art(lead: dict) -> dict:
+    """Junta dados do lead com status/URL da arte gerada."""
+    out = {k: _serialize_value(v) for k, v in lead.items() if k != "_id"}
+    token = out.get("token", "")
+    if token:
+        job = job_get(token)
+        if job:
+            out["art_status"] = job.get("status", "")
+            out["art_url"] = job.get("art_url", "")
+            if not out.get("mensagem_sonho"):
+                out["mensagem_sonho"] = job.get("mensagem", "")
+    out.setdefault("art_status", "")
+    out.setdefault("art_url", "")
+    if "created_at" not in out and out.get("timestamp"):
+        out["created_at"] = out["timestamp"]
+    return out
+
+
+def list_all_leads() -> list[dict]:
+    """Lista todos os leads (MongoDB ou leads.json local)."""
+    if MONGO_ENABLED:
+        try:
+            db, _ = get_mongo()
+            docs = list(db.leads.find().sort("created_at", -1))
+            return [{**doc, "_id": str(doc["_id"])} for doc in docs]
+        except Exception as e:
+            print(f"[admin] mongo list falhou: {e}")
+    if not LEADS_FILE.exists():
+        return []
+    try:
+        leads = json.loads(LEADS_FILE.read_text(encoding="utf-8"))
+        if not isinstance(leads, list):
+            return []
+        leads.sort(key=_lead_created_at, reverse=True)
+        return leads
+    except Exception as e:
+        print(f"[admin] falha ao ler leads.json: {e}")
+        return []
+
+
+def leads_to_csv(leads: list[dict]) -> str:
+    """Gera CSV com todos os campos dos leads."""
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+    for raw in leads:
+        row = enrich_lead_with_art(raw)
+        for key in ("pontos_fortes", "pontos_atencao"):
+            val = row.get(key)
+            if isinstance(val, list):
+                row[key] = "; ".join(str(v) for v in val)
+        row["interesse"] = INTERESSE_LABEL.get(row.get("interesse", ""), row.get("interesse", ""))
+        if row.get("elegivel") is True:
+            row["elegivel"] = "Sim"
+        elif row.get("elegivel") is False:
+            row["elegivel"] = "Não"
+        writer.writerow({col: row.get(col, "") for col in CSV_COLUMNS})
+    return buf.getvalue()
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page():
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado (defina ADMIN_PASSWORD).")
+    return Path("static/admin.html").read_text(encoding="utf-8")
+
+
+@app.get("/api/admin/leads")
+@limiter.limit("60/minute")
+async def admin_list_leads(request: Request):
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado.")
+    if not verify_admin(request):
+        raise HTTPException(401, "Senha incorreta.")
+    leads = [enrich_lead_with_art(l) for l in list_all_leads()]
+    return JSONResponse(leads)
+
+
+@app.get("/api/admin/leads.csv")
+@limiter.limit("10/minute")
+async def admin_export_csv(request: Request):
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado.")
+    if not verify_admin(request):
+        raise HTTPException(401, "Senha incorreta.")
+    csv_data = leads_to_csv(list_all_leads())
+    filename = f"visadream-leads-{datetime.now().strftime('%Y%m%d-%H%M')}.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8002))
@@ -658,6 +809,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port,
         reload=reload,
-        reload_includes=["main.py", "static/index.html"] if reload else None,
+        reload_includes=["main.py", "static/index.html", "static/admin.html"] if reload else None,
         reload_excludes=["venv/*", "venv", "static/results/*", "uploads/*"] if reload else None,
     )

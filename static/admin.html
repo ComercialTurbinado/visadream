@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — VisaDream · D4U</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root { --navy: #1e2a44; --gold: #d0b121; }
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #1e2a44; color: #f0f4ff; }
+  .gradient-bg {
+    background: radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.05) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 20%, rgba(208,177,33,0.06) 0%, transparent 50%),
+                #1e2a44;
+  }
+  .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(20px); }
+  .btn-primary { background: var(--gold); color: var(--navy); font-weight: 700; transition: transform 0.2s, box-shadow 0.2s; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(208,177,33,0.35); }
+  .btn-ghost { background: transparent; color: #cdd6e6; border: 1px solid rgba(255,255,255,0.25); }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+  input { background: #fff !important; color: var(--navy) !important; border: 1px solid rgba(255,255,255,0.25) !important; }
+  input:focus { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(208,177,33,0.3); outline: none; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+  .badge-done { background: rgba(34,197,94,0.18); color: #4ade80; border: 1px solid rgba(34,197,94,0.35); }
+  .badge-processing { background: rgba(234,179,8,0.18); color: #facc15; border: 1px solid rgba(234,179,8,0.35); }
+  .badge-failed, .badge-none { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
+  .badge-alta { background: rgba(34,197,94,0.18); color: #4ade80; }
+  .badge-media { background: rgba(234,179,8,0.18); color: #facc15; }
+  .badge-baixa { background: rgba(239,68,68,0.18); color: #f87171; }
+  .lead-row { cursor: pointer; transition: background 0.15s; }
+  .lead-row:hover { background: rgba(255,255,255,0.04); }
+  .lead-row.open { background: rgba(208,177,33,0.08); }
+  .detail-panel { display: none; }
+  .lead-row.open + .detail-panel { display: table-row; }
+  .art-thumb { width: 56px; height: 100px; object-fit: cover; border-radius: 8px; background: #fff; }
+  .art-preview { max-width: 220px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+  .field-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 2px; }
+  .field-value { font-size: 0.875rem; color: #e2e8f0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 1s linear infinite; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; font-size: 0.875rem; }
+</style>
+</head>
+<body class="gradient-bg min-h-screen">
+
+<div id="view-login" class="min-h-screen flex items-center justify-center px-6">
+  <div class="card rounded-2xl p-8 w-full max-w-sm">
+    <img src="/static/d4u-logo.png" alt="D4U" class="h-10 mb-6"/>
+    <h1 class="text-xl font-bold mb-1">Painel de Leads</h1>
+    <p class="text-gray-400 text-sm mb-6">VisaDream — acesso restrito</p>
+    <label class="block text-sm text-gray-300 mb-2" for="pwd">Senha de administrador</label>
+    <input type="password" id="pwd" class="w-full rounded-xl px-4 py-3 mb-4" placeholder="••••••••" autocomplete="current-password"/>
+    <p id="login-err" class="text-red-300 text-sm mb-3 hidden"></p>
+    <button id="btn-login" class="btn-primary w-full py-3 rounded-xl">Entrar</button>
+  </div>
+</div>
+
+<div id="view-dash" class="hidden">
+  <header class="px-6 py-5 max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <img src="/static/d4u-logo.png" alt="D4U" class="h-9"/>
+      <div>
+        <h1 class="text-lg font-bold">Leads VisaDream</h1>
+        <p class="text-gray-400 text-sm" id="lead-count">Carregando…</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <input type="search" id="search" placeholder="Buscar nome, e-mail, cidade…" class="rounded-xl px-4 py-2 text-sm w-64"/>
+      <button id="btn-csv" class="btn-primary px-4 py-2 rounded-xl text-sm">↓ CSV</button>
+      <button id="btn-refresh" class="btn-ghost px-4 py-2 rounded-xl text-sm">Atualizar</button>
+      <button id="btn-logout" class="btn-ghost px-4 py-2 rounded-xl text-sm">Sair</button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 pb-16">
+    <div id="loading" class="text-center py-20 hidden">
+      <div class="w-8 h-8 rounded-full border-2 spinner mx-auto" style="border-color:var(--gold)"></div>
+    </div>
+    <div id="empty" class="card rounded-2xl p-12 text-center hidden">
+      <p class="text-gray-300">Nenhum lead cadastrado ainda.</p>
+    </div>
+    <div id="table-container" class="card rounded-2xl hidden table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Objetivo</th>
+            <th>Visto</th>
+            <th>Prob.</th>
+            <th>Arte</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="leads-body"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+const STORAGE_KEY = 'visadream_admin_pwd';
+const INTERESSE = {
+  morar_trabalhar: 'Morar e Trabalhar',
+  empreender: 'Empreender',
+  investir: 'Investir',
+};
+const FIELD_LABELS = {
+  nome: 'Nome', sobrenome: 'Sobrenome', email: 'E-mail', whatsapp: 'WhatsApp',
+  nascimento: 'Nascimento', interesse: 'Objetivo', area: 'Área', formacao: 'Formação',
+  experiencia: 'Experiência', familia: 'Familiar nos EUA', negocio_tipo: 'Tipo de negócio',
+  capital: 'Capital disponível', ja_empresa: 'Já tem empresa', investimento: 'Investimento',
+  tipo_investimento: 'Tipo de investimento', cidade: 'Cidade', sonho: 'Sonho',
+  visto_principal: 'Visto principal', visto_secundario: 'Visto secundário',
+  probabilidade: 'Probabilidade', elegivel: 'Elegível', motivo_principal: 'Motivo principal',
+  mensagem_sonho: 'Mensagem personalizada', pontos_fortes: 'Pontos fortes',
+  pontos_atencao: 'Pontos de atenção', token: 'Token', art_status: 'Status da arte',
+};
+
+let allLeads = [];
+let authPwd = '';
+
+function authHeaders() {
+  return { Authorization: 'Bearer ' + authPwd };
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+}
+
+function probBadge(p) {
+  if (!p) return '';
+  const cls = p === 'Alta' ? 'badge-alta' : p === 'Média' ? 'badge-media' : 'badge-baixa';
+  return `<span class="badge ${cls}">${p}</span>`;
+}
+
+function artBadge(status) {
+  const map = { done: ['Pronta', 'badge-done'], processing: ['Gerando', 'badge-processing'], failed: ['Falhou', 'badge-failed'] };
+  const [label, cls] = map[status] || ['Sem foto', 'badge-none'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML;
+}
+
+function renderDetail(lead) {
+  const fields = [
+    'whatsapp', 'nascimento', 'area', 'formacao', 'experiencia', 'familia',
+    'negocio_tipo', 'capital', 'ja_empresa', 'investimento', 'tipo_investimento',
+    'cidade', 'sonho', 'visto_secundario', 'motivo_principal', 'mensagem_sonho',
+  ];
+  let html = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">';
+  for (const key of fields) {
+    let val = lead[key];
+    if (!val && val !== false) continue;
+    if (key === 'elegivel') val = val ? 'Sim' : 'Não';
+    if (Array.isArray(val)) val = val.join(' · ');
+    html += `<div><p class="field-label">${FIELD_LABELS[key] || key}</p><p class="field-value">${esc(String(val))}</p></div>`;
+  }
+  if (lead.pontos_fortes?.length) {
+    html += `<div class="sm:col-span-2"><p class="field-label">Pontos fortes</p><p class="field-value">${lead.pontos_fortes.map(esc).join(' · ')}</p></div>`;
+  }
+  if (lead.pontos_atencao?.length) {
+    html += `<div class="sm:col-span-2"><p class="field-label">Pontos de atenção</p><p class="field-value">${lead.pontos_atencao.map(esc).join(' · ')}</p></div>`;
+  }
+  html += '</div>';
+
+  if (lead.art_url && lead.art_status === 'done') {
+    html += `<div class="pt-2 pb-4">
+      <p class="field-label mb-2">Arte gerada</p>
+      <a href="${esc(lead.art_url)}" target="_blank" rel="noopener">
+        <img src="${esc(lead.art_url)}" alt="Arte" class="art-preview" loading="lazy"/>
+      </a>
+      <p class="text-gray-500 text-xs mt-2"><a href="${esc(lead.art_url)}" target="_blank" class="underline">Abrir em tela cheia</a></p>
+    </div>`;
+  }
+  return html;
+}
+
+function renderTable(leads) {
+  const body = document.getElementById('leads-body');
+  body.innerHTML = '';
+  if (!leads.length) {
+    document.getElementById('table-container').classList.add('hidden');
+    document.getElementById('empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('empty').classList.add('hidden');
+  document.getElementById('table-container').classList.remove('hidden');
+
+  for (const lead of leads) {
+    const tr = document.createElement('tr');
+    tr.className = 'lead-row';
+    const nome = `${lead.nome || ''} ${lead.sobrenome || ''}`.trim();
+    const thumb = (lead.art_url && lead.art_status === 'done')
+      ? `<img src="${esc(lead.art_url)}" class="art-thumb" alt="" loading="lazy"/>`
+      : '<span class="text-gray-500 text-xs">—</span>';
+    tr.innerHTML = `
+      <td class="text-gray-400 text-xs whitespace-nowrap">${fmtDate(lead.created_at || lead.timestamp)}</td>
+      <td class="font-medium">${esc(nome)}</td>
+      <td class="text-gray-300">${esc(lead.email)}</td>
+      <td>${esc(INTERESSE[lead.interesse] || lead.interesse || '—')}</td>
+      <td>${esc(lead.visto_principal || '—')}</td>
+      <td>${probBadge(lead.probabilidade)}</td>
+      <td>${thumb}</td>
+      <td>${artBadge(lead.art_status)}</td>`;
+    tr.addEventListener('click', () => {
+      const open = tr.classList.toggle('open');
+      if (open && !tr.nextElementSibling?.classList.contains('detail-panel')) {
+        const detail = document.createElement('tr');
+        detail.className = 'detail-panel';
+        detail.innerHTML = `<td colspan="8" class="!border-b-2 !border-white/10">${renderDetail(lead)}</td>`;
+        tr.after(detail);
+      } else if (!open && tr.nextElementSibling?.classList.contains('detail-panel')) {
+        tr.nextElementSibling.remove();
+      }
+    });
+    body.appendChild(tr);
+  }
+}
+
+function filterLeads(q) {
+  q = (q || '').toLowerCase().trim();
+  if (!q) return allLeads;
+  return allLeads.filter(l => {
+    const hay = [l.nome, l.sobrenome, l.email, l.cidade, l.visto_principal, l.interesse, l.whatsapp]
+      .filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+async function loadLeads() {
+  document.getElementById('loading').classList.remove('hidden');
+  try {
+    const r = await fetch('/api/admin/leads', { headers: authHeaders() });
+    if (r.status === 401) { logout(); throw new Error('Senha inválida'); }
+    if (!r.ok) throw new Error('Erro ao carregar leads');
+    allLeads = await r.json();
+    document.getElementById('lead-count').textContent = `${allLeads.length} lead${allLeads.length !== 1 ? 's' : ''} cadastrado${allLeads.length !== 1 ? 's' : ''}`;
+    renderTable(filterLeads(document.getElementById('search').value));
+  } catch (e) {
+    alert(e.message || 'Falha ao carregar');
+  } finally {
+    document.getElementById('loading').classList.add('hidden');
+  }
+}
+
+async function downloadCsv() {
+  try {
+    const r = await fetch('/api/admin/leads.csv', { headers: authHeaders() });
+    if (!r.ok) throw new Error('Falha no download');
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `visadream-leads-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e.message || 'Erro ao baixar CSV');
+  }
+}
+
+function showDash() {
+  document.getElementById('view-login').classList.add('hidden');
+  document.getElementById('view-dash').classList.remove('hidden');
+  loadLeads();
+}
+
+function logout() {
+  sessionStorage.removeItem(STORAGE_KEY);
+  authPwd = '';
+  document.getElementById('view-dash').classList.add('hidden');
+  document.getElementById('view-login').classList.remove('hidden');
+  document.getElementById('pwd').value = '';
+}
+
+async function tryLogin(pwd) {
+  authPwd = pwd;
+  const r = await fetch('/api/admin/leads', { headers: authHeaders() });
+  if (r.status === 401) return false;
+  if (!r.ok) throw new Error('Painel indisponível');
+  sessionStorage.setItem(STORAGE_KEY, pwd);
+  showDash();
+  return true;
+}
+
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const pwd = document.getElementById('pwd').value;
+  const err = document.getElementById('login-err');
+  err.classList.add('hidden');
+  if (!pwd) { err.textContent = 'Informe a senha.'; err.classList.remove('hidden'); return; }
+  try {
+    const ok = await tryLogin(pwd);
+    if (!ok) { err.textContent = 'Senha incorreta.'; err.classList.remove('hidden'); }
+  } catch (e) {
+    err.textContent = e.message || 'Erro ao conectar.';
+    err.classList.remove('hidden');
+  }
+});
+
+document.getElementById('pwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-login').click();
+});
+
+document.getElementById('btn-logout').addEventListener('click', logout);
+document.getElementById('btn-refresh').addEventListener('click', loadLeads);
+document.getElementById('btn-csv').addEventListener('click', downloadCsv);
+document.getElementById('search').addEventListener('input', e => renderTable(filterLeads(e.target.value)));
+
+(function init() {
+  const saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    authPwd = saved;
+    showDash();
+  }
+})();
+</script>
+</body>
+</html>

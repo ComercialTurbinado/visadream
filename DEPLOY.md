@@ -21,8 +21,15 @@ App: FastAPI (Python) + HTML estático. Geração de imagem leva ~40s (medium).
 | `MONGODB_URI` | ✅ | Connection string do MongoDB Atlas (leads + jobs + arte) |
 | `MONGODB_DB` | não | Nome do banco (padrão `visadream`) |
 | `HUBSPOT_TOKEN` | (futuro) | Private app token do HubSpot |
+| `ADMIN_PASSWORD` | ✅ (admin) | Senha do painel `/admin` (leads + CSV) |
 
 > Nunca commitar `.env`. Em produção, setar via env vars do Lightsail/AWS Secrets Manager.
+
+## Painel de leads (`/admin`)
+- Acesse `https://seu-dominio/admin` com a senha definida em `ADMIN_PASSWORD`.
+- Lista todos os leads com respostas do questionário, análise de visto e arte gerada.
+- Botão **CSV** exporta todos os campos.
+- Leads ficam no MongoDB (`visadream.leads`); fallback local em `leads.json`.
 
 ## Subir no AWS Lightsail Container (resumo)
 1. `aws lightsail create-container-service --service-name visadream --power small --scale 1`
