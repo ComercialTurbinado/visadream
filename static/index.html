@@ -8,7 +8,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   :root { --navy: #1e2a44; --gold: #d0b121; }
-  * { font-family: 'Inter', sans-serif; }
+  * { font-family: 'Inter', sans-serif; line-height: 1rem; }
 
   body { background: #1e2a44; color: #f0f4ff; }
 
@@ -201,27 +201,27 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Motivo da viagem</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Motivo da viagem">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Turismo" onclick="selectOption(this)">🏖️ Turismo</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Negócios" onclick="selectOption(this)">💼 Negócios</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Visitar família" onclick="selectOption(this)">👨‍👩‍👧 Família</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Evento / Conferência" onclick="selectOption(this)">🎤 Evento</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="motivo_viagem" data-value="Turismo" onclick="selectOption(this)">🏖️ Turismo</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="motivo_viagem" data-value="Negócios" onclick="selectOption(this)">💼 Negócios</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="motivo_viagem" data-value="Visitar família" onclick="selectOption(this)">👨‍👩‍👧 Família</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="motivo_viagem" data-value="Evento / Conferência" onclick="selectOption(this)">🎤 Evento</button>
           </div>
         </div>
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Duração pretendida</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Duração da viagem">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="duracao_viagem" data-value="Até 90 dias" onclick="selectOption(this)">Até 90 dias</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="duracao_viagem" data-value="3 a 6 meses" onclick="selectOption(this)">3 a 6 meses</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="duracao_viagem" data-value="Mais de 6 meses" onclick="selectOption(this)">Mais de 6 meses</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="duracao_viagem" data-value="Até 90 dias" onclick="selectOption(this)">Até 90 dias</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="duracao_viagem" data-value="3 a 6 meses" onclick="selectOption(this)">3 a 6 meses</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="duracao_viagem" data-value="Mais de 6 meses" onclick="selectOption(this)">Mais de 6 meses</button>
           </div>
         </div>
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Já teve visto americano?</label>
           <div class="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Histórico de visto">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Sim, válido ou recente" onclick="selectOption(this)">✅ Sim, válido ou recente</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Sim, mas expirado" onclick="selectOption(this)">📅 Sim, mas expirado</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Nunca tive" onclick="selectOption(this)">🆕 Nunca tive</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Já foi negado" onclick="selectOption(this)">⚠️ Já foi negado</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="historico_visto" data-value="Sim, válido ou recente" onclick="selectOption(this)">✅ Sim, válido ou recente</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="historico_visto" data-value="Sim, mas expirado" onclick="selectOption(this)">📅 Sim, mas expirado</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="historico_visto" data-value="Nunca tive" onclick="selectOption(this)">🆕 Nunca tive</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="historico_visto" data-value="Já foi negado" onclick="selectOption(this)">⚠️ Já foi negado</button>
           </div>
         </div>
       </div>
@@ -231,12 +231,12 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Área de atuação</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Área de atuação">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="area" data-value="Tecnologia" onclick="selectOption(this)">💻 Tecnologia</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="area" data-value="Saúde" onclick="selectOption(this)">🩺 Saúde</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="area" data-value="Finanças" onclick="selectOption(this)">📊 Finanças</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="area" data-value="Engenharia" onclick="selectOption(this)">🏗️ Engenharia</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="area" data-value="Educação" onclick="selectOption(this)">🎓 Educação</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="area" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="area" data-value="Tecnologia" onclick="selectOption(this)">💻 Tecnologia</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="area" data-value="Saúde" onclick="selectOption(this)">🩺 Saúde</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="area" data-value="Finanças" onclick="selectOption(this)">📊 Finanças</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="area" data-value="Engenharia" onclick="selectOption(this)">🏗️ Engenharia</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="area" data-value="Educação" onclick="selectOption(this)">🎓 Educação</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="area" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
           </div>
           <div id="area-outro-wrap" class="hidden mt-3">
             <input type="text" id="area-outro" placeholder="Qual é a sua área de atuação?" class="w-full rounded-xl px-4 py-3 text-base" oninput="form.area_outro=this.value.trim()"/>
@@ -245,11 +245,11 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Nível de formação</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Formação">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Ensino Médio" onclick="selectOption(this)">Ensino Médio</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Graduação" onclick="selectOption(this)">Graduação</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Pós / MBA" onclick="selectOption(this)">Pós / MBA</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Mestrado ou Doutorado" onclick="selectOption(this)">Mestrado / PhD</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="formacao" data-value="Ensino Médio" onclick="selectOption(this)">Ensino Médio</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="formacao" data-value="Graduação" onclick="selectOption(this)">Graduação</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="formacao" data-value="Pós / MBA" onclick="selectOption(this)">Pós / MBA</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="formacao" data-value="Mestrado ou Doutorado" onclick="selectOption(this)">Mestrado / PhD</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="formacao" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
           </div>
           <div id="formacao-outro-wrap" class="hidden mt-3">
             <input type="text" id="formacao-outro" placeholder="Qual é o seu nível de ensino?" class="w-full rounded-xl px-4 py-3 text-base" oninput="form.formacao_outro=this.value.trim()"/>
@@ -258,18 +258,18 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Anos de experiência na área</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Experiência">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="Menos de 2 anos" onclick="selectOption(this)">Menos de 2 anos</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="2 a 5 anos" onclick="selectOption(this)">2 a 5 anos</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="5 a 10 anos" onclick="selectOption(this)">5 a 10 anos</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="Mais de 10 anos" onclick="selectOption(this)">Mais de 10 anos</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="experiencia" data-value="Menos de 2 anos" onclick="selectOption(this)">Menos de 2 anos</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="experiencia" data-value="2 a 5 anos" onclick="selectOption(this)">2 a 5 anos</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="experiencia" data-value="5 a 10 anos" onclick="selectOption(this)">5 a 10 anos</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="experiencia" data-value="Mais de 10 anos" onclick="selectOption(this)">Mais de 10 anos</button>
           </div>
         </div>
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Tem familiar próximo (cônjuge, pais, filhos) cidadão ou residente nos EUA?</label>
           <div class="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Familiar nos EUA">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="familia" data-value="Não tenho familiares nos EUA" onclick="selectOption(this)">🚫 Não tenho</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="familia" data-value="Sim, familiar próximo cidadão/residente" onclick="selectOption(this)">👨‍👩‍👧 Sim, familiar próximo</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="familia" data-value="Sim, cônjuge americano(a) ou residente" onclick="selectOption(this)">💍 Sim, cônjuge americano(a)</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="familia" data-value="Não tenho familiares nos EUA" onclick="selectOption(this)">🚫 Não tenho</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="familia" data-value="Sim, familiar próximo cidadão/residente" onclick="selectOption(this)">👨‍👩‍👧 Sim, familiar próximo</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="familia" data-value="Sim, cônjuge americano(a) ou residente" onclick="selectOption(this)">💍 Sim, cônjuge americano(a)</button>
           </div>
         </div>
       </div>
@@ -279,19 +279,19 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Capacidade de investimento</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Investimento">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="investimento" data-value="Menos de $50k" onclick="selectOption(this)">💰 Menos de $50k</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="investimento" data-value="$50k a $200k" onclick="selectOption(this)">💰💰 $50k–$200k</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="investimento" data-value="$200k a $800k" onclick="selectOption(this)">💰💰💰 $200k–$800k</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="investimento" data-value="Acima de $800k" onclick="selectOption(this)">🏆 Acima de $800k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="investimento" data-value="Menos de $50k" onclick="selectOption(this)">💰 Menos de $50k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="investimento" data-value="$50k a $200k" onclick="selectOption(this)">💰💰 $50k–$200k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="investimento" data-value="$200k a $800k" onclick="selectOption(this)">💰💰💰 $200k–$800k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="investimento" data-value="Acima de $800k" onclick="selectOption(this)">🏆 Acima de $800k</button>
           </div>
         </div>
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Onde pretende investir?</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Tipo de investimento">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="tipo_investimento" data-value="Imóveis" onclick="selectOption(this)">🏠 Imóveis</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="tipo_investimento" data-value="Negócio próprio" onclick="selectOption(this)">🏪 Negócio</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="tipo_investimento" data-value="Fundos / Ações" onclick="selectOption(this)">📈 Fundos</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="tipo_investimento" data-value="Ainda decidindo" onclick="selectOption(this)">🤔 Decidindo</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="tipo_investimento" data-value="Imóveis" onclick="selectOption(this)">🏠 Imóveis</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="tipo_investimento" data-value="Negócio próprio" onclick="selectOption(this)">🏪 Negócio</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="tipo_investimento" data-value="Fundos / Ações" onclick="selectOption(this)">📈 Fundos</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="tipo_investimento" data-value="Ainda decidindo" onclick="selectOption(this)">🤔 Decidindo</button>
           </div>
         </div>
       </div>
@@ -301,28 +301,28 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Que tipo de negócio você quer tocar nos EUA?</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Tipo de negócio">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="negocio_tipo" data-value="Tecnologia / Startup" onclick="selectOption(this)">💻 Tecnologia</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="negocio_tipo" data-value="Comércio / Varejo" onclick="selectOption(this)">🛍️ Comércio</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="negocio_tipo" data-value="Serviços" onclick="selectOption(this)">🛠️ Serviços</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="negocio_tipo" data-value="Restaurante / Food" onclick="selectOption(this)">🍔 Food</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="negocio_tipo" data-value="Franquia" onclick="selectOption(this)">🏬 Franquia</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="negocio_tipo" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="negocio_tipo" data-value="Tecnologia / Startup" onclick="selectOption(this)">💻 Tecnologia</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="negocio_tipo" data-value="Comércio / Varejo" onclick="selectOption(this)">🛍️ Comércio</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="negocio_tipo" data-value="Serviços" onclick="selectOption(this)">🛠️ Serviços</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="negocio_tipo" data-value="Restaurante / Food" onclick="selectOption(this)">🍔 Food</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="negocio_tipo" data-value="Franquia" onclick="selectOption(this)">🏬 Franquia</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="negocio_tipo" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
           </div>
         </div>
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Capital disponível para começar</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Capital">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="capital" data-value="Menos de $50k" onclick="selectOption(this)">💰 Menos de $50k</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="capital" data-value="$50k a $200k" onclick="selectOption(this)">💰💰 $50k–$200k</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="capital" data-value="$200k a $800k" onclick="selectOption(this)">💰💰💰 $200k–$800k</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="capital" data-value="Acima de $800k" onclick="selectOption(this)">🏆 Acima de $800k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="capital" data-value="Menos de $50k" onclick="selectOption(this)">💰 Menos de $50k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="capital" data-value="$50k a $200k" onclick="selectOption(this)">💰💰 $50k–$200k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="capital" data-value="$200k a $800k" onclick="selectOption(this)">💰💰💰 $200k–$800k</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm text-left" data-group="capital" data-value="Acima de $800k" onclick="selectOption(this)">🏆 Acima de $800k</button>
           </div>
         </div>
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Você já tem empresa hoje?</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Já tem empresa">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="ja_empresa" data-value="Sim, já tenho empresa no Brasil" onclick="selectOption(this)">Sim, no Brasil</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="ja_empresa" data-value="Não, vou começar do zero" onclick="selectOption(this)">Não, do zero</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="ja_empresa" data-value="Sim, já tenho empresa no Brasil" onclick="selectOption(this)">Sim, no Brasil</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="ja_empresa" data-value="Não, vou começar do zero" onclick="selectOption(this)">Não, do zero</button>
           </div>
         </div>
       </div>
@@ -347,13 +347,13 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block">Em qual cidade você sonha em viver?</label>
           <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Cidade">
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="New York" onclick="selectOption(this)">🗽 New York</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Miami" onclick="selectOption(this)">🌴 Miami</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Los Angeles" onclick="selectOption(this)">🎬 L.A.</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="San Francisco" onclick="selectOption(this)">🌉 San Francisco</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Chicago" onclick="selectOption(this)">🏙️ Chicago</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Orlando" onclick="selectOption(this)">🎢 Orlando</button>
-            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="New York" onclick="selectOption(this)">🗽 New York</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="Miami" onclick="selectOption(this)">🌴 Miami</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="Los Angeles" onclick="selectOption(this)">🎬 L.A.</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="San Francisco" onclick="selectOption(this)">🌉 San Francisco</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="Chicago" onclick="selectOption(this)">🏙️ Chicago</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="Orlando" onclick="selectOption(this)">🎢 Orlando</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="cidade" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
           </div>
           <div id="cidade-outro-wrap" class="hidden mt-3">
             <input type="text" id="cidade-outro" placeholder="Qual cidade você sonha em conhecer?" class="w-full rounded-xl px-4 py-3 text-base" oninput="form.cidade_outro=this.value.trim()"/>
@@ -698,7 +698,7 @@ function buildDreamChips(interesse) {
   (dreamSuggestions[interesse] || []).forEach(text => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'option-btn rounded-xl px-4 py-3 text-sm text-left';
+    b.className = 'option-btn rounded-xl px-4 py-2 text-sm text-left';
     b.textContent = text;
     b.onclick = () => {
       wrap.querySelectorAll('button').forEach(x => x.classList.remove('selected'));
@@ -714,7 +714,7 @@ function buildDreamChips(interesse) {
 
   const outro = document.createElement('button');
   outro.type = 'button';
-  outro.className = 'option-btn rounded-xl px-4 py-3 text-sm text-left';
+  outro.className = 'option-btn rounded-xl px-4 py-2 text-sm text-left';
   outro.textContent = '✨ Outro';
   outro.onclick = () => {
     wrap.querySelectorAll('button').forEach(x => x.classList.remove('selected'));
