@@ -219,6 +219,7 @@ def build_interest_section(data: dict) -> str:
         return (
             f"Área de atuação: {data.get('area', '')}\n"
             f"Nível de formação: {data.get('formacao', '')}\n"
+            f"Anos de experiência na área: {data.get('experiencia', '')}\n"
             f"Familiar próximo cidadão/residente nos EUA: {data.get('familia', '')}\n"
         )
     if interesse == "empreender":

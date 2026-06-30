@@ -212,6 +212,15 @@
           </div>
         </div>
         <div>
+          <label class="text-sm text-gray-300 mb-3 block">Anos de experiência na área</label>
+          <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Experiência">
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="Menos de 2 anos" onclick="selectOption(this)">Menos de 2 anos</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="2 a 5 anos" onclick="selectOption(this)">2 a 5 anos</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="5 a 10 anos" onclick="selectOption(this)">5 a 10 anos</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="experiencia" data-value="Mais de 10 anos" onclick="selectOption(this)">Mais de 10 anos</button>
+          </div>
+        </div>
+        <div>
           <label class="text-sm text-gray-300 mb-3 block">Tem familiar próximo (cônjuge, pais, filhos) cidadão ou residente nos EUA?</label>
           <div class="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Familiar nos EUA">
             <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="familia" data-value="Não tenho familiares nos EUA" onclick="selectOption(this)">🚫 Não tenho</button>
@@ -476,7 +485,7 @@ window.onTurnstileLoad = function () {
 // ── State ──────────────────────────────────────────────────────────
 const form = {
   interesse: '',
-  area: '', formacao: '', familia: '',
+  area: '', formacao: '', experiencia: '', familia: '',
   negocio_tipo: '', capital: '', ja_empresa: '',
   investimento: '', tipo_investimento: '',
   cidade: '', sonho: '',
@@ -513,7 +522,7 @@ const dreamSuggestions = {
 };
 
 const requiredByInteresse = {
-  morar_trabalhar: ['area', 'formacao', 'familia'],
+  morar_trabalhar: ['area', 'formacao', 'experiencia', 'familia'],
   empreender:      ['negocio_tipo', 'capital', 'ja_empresa'],
   investir:        ['investimento', 'tipo_investimento'],
 };
