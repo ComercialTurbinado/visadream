@@ -86,7 +86,7 @@ MONGODB_URI = os.environ.get("MONGODB_URI", "")
 MONGODB_DB = os.environ.get("MONGODB_DB", "visadream")
 MONGO_ENABLED = bool(MONGODB_URI)
 HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip().strip('"').strip("'")
 
 CSV_COLUMNS = [
     "created_at", "nome", "sobrenome", "email", "whatsapp", "nascimento",
@@ -678,7 +678,10 @@ def verify_admin(request: Request) -> bool:
         return False
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
-        return secrets.compare_digest(auth[7:], ADMIN_PASSWORD)
+        token = auth[7:].strip()
+        if not token:
+            return False
+        return secrets.compare_digest(token, ADMIN_PASSWORD)
     return False
 
 
@@ -760,6 +763,12 @@ def leads_to_csv(leads: list[dict]) -> str:
             row["elegivel"] = "Não"
         writer.writerow({col: row.get(col, "") for col in CSV_COLUMNS})
     return buf.getvalue()
+
+
+@app.get("/api/admin/status")
+async def admin_status():
+    """Indica se o painel está configurado (sem expor a senha)."""
+    return JSONResponse({"configured": bool(ADMIN_PASSWORD)})
 
 
 @app.get("/admin", response_class=HTMLResponse)
