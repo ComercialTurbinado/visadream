@@ -876,7 +876,9 @@ function restart() {
   document.getElementById('sonho-outro-wrap')?.classList.add('hidden');
   const so = document.getElementById('sonho-outro'); if (so) so.value = '';
   document.getElementById('formacao-outro-wrap')?.classList.add('hidden');
+  document.getElementById('area-outro-wrap')?.classList.add('hidden');
   document.getElementById('cidade-outro-wrap')?.classList.add('hidden');
+  const ao = document.getElementById('area-outro'); if (ao) ao.value = '';
   const fo = document.getElementById('formacao-outro'); if (fo) fo.value = '';
   const co = document.getElementById('cidade-outro'); if (co) co.value = '';
   ['err-2','err-3','err-4'].forEach(clearErr);
