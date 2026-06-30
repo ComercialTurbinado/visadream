@@ -157,6 +157,13 @@
       <p class="text-gray-300 mb-8">Escolha seu principal objetivo nos EUA.</p>
 
       <div class="space-y-3 stagger" role="radiogroup" aria-label="Objetivo">
+        <button class="interest-card w-full rounded-2xl p-5 flex items-center gap-4 text-left" role="radio" aria-checked="false" data-interesse="viajar" onclick="selectInteresse(this)">
+          <span class="text-3xl" aria-hidden="true">✈️</span>
+          <span>
+            <span class="block font-bold text-lg">Viajar</span>
+            <span class="block text-sm" style="color:rgba(30,42,68,0.6)">Turismo, negócios ou visita aos Estados Unidos</span>
+          </span>
+        </button>
         <button class="interest-card w-full rounded-2xl p-5 flex items-center gap-4 text-left" role="radio" aria-checked="false" data-interesse="morar_trabalhar" onclick="selectInteresse(this)">
           <span class="text-3xl" aria-hidden="true">🏡</span>
           <span>
@@ -189,6 +196,36 @@
       <h2 class="text-3xl font-bold mb-2" id="b-titulo">Detalhes</h2>
       <p class="text-gray-300 mb-8" id="b-sub">Toque nas opções que combinam com você.</p>
 
+      <!-- VIAJAR -->
+      <div class="branch hidden space-y-6 stagger" id="branch-viajar">
+        <div>
+          <label class="text-sm text-gray-300 mb-3 block">Motivo da viagem</label>
+          <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Motivo da viagem">
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Turismo" onclick="selectOption(this)">🏖️ Turismo</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Negócios" onclick="selectOption(this)">💼 Negócios</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Visitar família" onclick="selectOption(this)">👨‍👩‍👧 Família</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="motivo_viagem" data-value="Evento / Conferência" onclick="selectOption(this)">🎤 Evento</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-gray-300 mb-3 block">Duração pretendida</label>
+          <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Duração da viagem">
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="duracao_viagem" data-value="Até 90 dias" onclick="selectOption(this)">Até 90 dias</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="duracao_viagem" data-value="3 a 6 meses" onclick="selectOption(this)">3 a 6 meses</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="duracao_viagem" data-value="Mais de 6 meses" onclick="selectOption(this)">Mais de 6 meses</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-gray-300 mb-3 block">Já teve visto americano?</label>
+          <div class="grid grid-cols-1 gap-3" role="radiogroup" aria-label="Histórico de visto">
+            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Sim, válido ou recente" onclick="selectOption(this)">✅ Sim, válido ou recente</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Sim, mas expirado" onclick="selectOption(this)">📅 Sim, mas expirado</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Nunca tive" onclick="selectOption(this)">🆕 Nunca tive</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm text-left" data-group="historico_visto" data-value="Já foi negado" onclick="selectOption(this)">⚠️ Já foi negado</button>
+          </div>
+        </div>
+      </div>
+
       <!-- MORAR / TRABALHAR -->
       <div class="branch hidden space-y-6 stagger" id="branch-morar_trabalhar">
         <div>
@@ -209,6 +246,10 @@
             <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Graduação" onclick="selectOption(this)">Graduação</button>
             <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Pós / MBA" onclick="selectOption(this)">Pós / MBA</button>
             <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Mestrado ou Doutorado" onclick="selectOption(this)">Mestrado / PhD</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="formacao" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
+          </div>
+          <div id="formacao-outro-wrap" class="hidden mt-3">
+            <input type="text" id="formacao-outro" placeholder="Qual é o seu nível de ensino?" class="w-full rounded-xl px-4 py-3 text-base" oninput="form.formacao_outro=this.value.trim()"/>
           </div>
         </div>
         <div>
@@ -309,6 +350,10 @@
             <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="San Francisco" onclick="selectOption(this)">🌉 San Francisco</button>
             <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Chicago" onclick="selectOption(this)">🏙️ Chicago</button>
             <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Orlando" onclick="selectOption(this)">🎢 Orlando</button>
+            <button type="button" class="option-btn rounded-xl p-3 text-sm" data-group="cidade" data-value="Outro" onclick="selectOption(this)">✨ Outro</button>
+          </div>
+          <div id="cidade-outro-wrap" class="hidden mt-3">
+            <input type="text" id="cidade-outro" placeholder="Qual cidade você sonha em conhecer?" class="w-full rounded-xl px-4 py-3 text-base" oninput="form.cidade_outro=this.value.trim()"/>
           </div>
         </div>
 
@@ -485,22 +530,30 @@ window.onTurnstileLoad = function () {
 // ── State ──────────────────────────────────────────────────────────
 const form = {
   interesse: '',
-  area: '', formacao: '', experiencia: '', familia: '',
+  area: '', formacao: '', formacao_outro: '', experiencia: '', familia: '',
+  motivo_viagem: '', duracao_viagem: '', historico_visto: '',
   negocio_tipo: '', capital: '', ja_empresa: '',
   investimento: '', tipo_investimento: '',
-  cidade: '', sonho: '',
+  cidade: '', cidade_outro: '', sonho: '',
   nome: '', sobrenome: '', email: '', whatsapp: '', nascimento: ''
 };
 let photoFile = null;
 let currentStep = 1;
 
 const branchCopy = {
+  viajar:          { titulo: 'Sua viagem', sub: 'Conte um pouco sobre o que você planeja.' },
   morar_trabalhar: { titulo: 'Morar e trabalhar', sub: 'Formação e vínculos definem o melhor caminho pra você.' },
   empreender:      { titulo: 'Seu negócio', sub: 'Vamos entender o porte e o estágio do seu empreendimento.' },
   investir:        { titulo: 'Seu investimento', sub: 'O valor e o tipo definem o visto ideal.' },
 };
 
 const dreamSuggestions = {
+  viajar: [
+    'Conhecer os principais pontos turísticos dos EUA',
+    'Fazer uma viagem inesquecível com a família',
+    'Participar de um evento ou conferência',
+    'Explorar novas culturas e lugares',
+  ],
   morar_trabalhar: [
     'Construir uma carreira sólida e viver bem nos EUA',
     'Dar mais oportunidades e qualidade de vida pra minha família',
@@ -522,6 +575,7 @@ const dreamSuggestions = {
 };
 
 const requiredByInteresse = {
+  viajar:          ['motivo_viagem', 'duracao_viagem', 'historico_visto'],
   morar_trabalhar: ['area', 'formacao', 'experiencia', 'familia'],
   empreender:      ['negocio_tipo', 'capital', 'ja_empresa'],
   investir:        ['investimento', 'tipo_investimento'],
@@ -576,6 +630,30 @@ function selectOption(btn) {
   btn.classList.add('selected');
   if (btn.getAttribute('role') === 'radio') btn.setAttribute('aria-checked', 'true');
   form[group] = btn.dataset.value;
+
+  const outroWrap = document.getElementById(group + '-outro-wrap');
+  if (outroWrap) {
+    if (btn.dataset.value === 'Outro') {
+      outroWrap.classList.remove('hidden');
+      outroWrap.querySelector('input')?.focus();
+    } else {
+      outroWrap.classList.add('hidden');
+      form[group + '_outro'] = '';
+      const inp = outroWrap.querySelector('input');
+      if (inp) inp.value = '';
+    }
+  }
+}
+
+function resolveOutroFields() {
+  if (form.formacao === 'Outro') {
+    form.formacao_outro = (document.getElementById('formacao-outro')?.value || '').trim();
+    if (form.formacao_outro) form.formacao = form.formacao_outro;
+  }
+  if (form.cidade === 'Outro') {
+    form.cidade_outro = (document.getElementById('cidade-outro')?.value || '').trim();
+    if (form.cidade_outro) form.cidade = form.cidade_outro;
+  }
 }
 
 // ── Objetivo (ramificação) ─────────────────────────────────────────
@@ -594,7 +672,7 @@ function buildBranch(interesse) {
   document.querySelectorAll('#step-2 .branch').forEach(b => b.classList.add('hidden'));
   const active = document.getElementById('branch-' + interesse);
   if (active) active.classList.remove('hidden');
-  const copy = branchCopy[interesse] || branchCopy.trabalhar;
+  const copy = branchCopy[interesse] || { titulo: 'Detalhes', sub: 'Toque nas opções que combinam com você.' };
   document.getElementById('b-titulo').textContent = copy.titulo;
   document.getElementById('b-sub').textContent = copy.sub;
 }
@@ -624,12 +702,22 @@ function nextFrom2() {
   for (const k of req) {
     if (!form[k]) return showErr('err-2', 'Toque em uma opção em cada pergunta para continuar.');
   }
+  if (form.formacao === 'Outro') {
+    const txt = (document.getElementById('formacao-outro')?.value || '').trim();
+    if (!txt) return showErr('err-2', 'Informe seu nível de ensino em "Outro".');
+    form.formacao_outro = txt;
+  }
   goStep(3);
 }
 
 function nextFrom3() {
   clearErr('err-3');
   if (!form.cidade) return showErr('err-3', 'Escolha a cidade dos seus sonhos.');
+  if (form.cidade === 'Outro') {
+    const txt = (document.getElementById('cidade-outro')?.value || '').trim();
+    if (!txt) return showErr('err-3', 'Informe a cidade em "Outro".', document.getElementById('cidade-outro'));
+    form.cidade_outro = txt;
+  }
   if (!form.sonho)  return showErr('err-3', 'Toque numa ideia de sonho.');
   goStep(4); // foto é opcional
 }
@@ -674,7 +762,7 @@ function handleFile(input) {
 async function startAnalysis() {
   try {
     updateLoadingStep(1);
-    // Cadastra tudo + dispara a arte pra processamento e recebe o token de acesso.
+    resolveOutroFields();
     const fd = new FormData();
     fd.append('payload', JSON.stringify(form));
     if (photoFile) fd.append('photo', photoFile);
@@ -742,6 +830,10 @@ function restart() {
   document.getElementById('photo-empty').classList.remove('hidden');
   document.querySelectorAll('.option-btn, .interest-card').forEach(b => { b.classList.remove('selected'); if (b.getAttribute('role')==='radio') b.setAttribute('aria-checked','false'); });
   document.getElementById('dream-chips').innerHTML = '';
+  document.getElementById('formacao-outro-wrap')?.classList.add('hidden');
+  document.getElementById('cidade-outro-wrap')?.classList.add('hidden');
+  const fo = document.getElementById('formacao-outro'); if (fo) fo.value = '';
+  const co = document.getElementById('cidade-outro'); if (co) co.value = '';
   ['err-2','err-3','err-4'].forEach(clearErr);
   goStep(1);
 }

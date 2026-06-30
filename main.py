@@ -93,6 +93,7 @@ if ADMIN_PASSWORD:
 CSV_COLUMNS = [
     "created_at", "nome", "sobrenome", "email", "whatsapp", "nascimento",
     "interesse", "area", "formacao", "experiencia", "familia",
+    "motivo_viagem", "duracao_viagem", "historico_visto",
     "negocio_tipo", "capital", "ja_empresa", "investimento", "tipo_investimento",
     "cidade", "sonho", "visto_principal", "visto_secundario", "probabilidade",
     "elegivel", "motivo_principal", "mensagem_sonho", "pontos_fortes", "pontos_atencao",
@@ -183,9 +184,12 @@ def get_zodiac(birth_str: str) -> dict:
 
 SYSTEM_ELIGIBILITY = """Você é um especialista em vistos americanos e imigração para os EUA.
 Analise as respostas do questionário e determine a elegibilidade para Green Card ou vistos americanos.
-Leve em conta o OBJETIVO principal informado (trabalhar, investir ou empreender) ao recomendar o visto.
+Leve em conta o OBJETIVO principal informado (viajar, morar/trabalhar, investir ou empreender) ao recomendar o visto.
 
 Vistos a considerar:
+- B-1/B-2: Turismo, negócios ou visita de curta duração
+- ESTA: Autorização eletrônica para países do VWP (viagens curtas)
+- F-1/M-1: Estudo (se aplicável ao perfil)
 - EB-1A: Habilidade extraordinária (prêmios, publicações, liderança)
 - EB-1B: Pesquisadores e professores destacados
 - EB-2 NIW: National Interest Waiver (profissionais com impacto nacional)
@@ -218,6 +222,7 @@ async def root():
 
 
 INTERESSE_LABEL = {
+    "viajar": "Viajar para os EUA",
     "morar_trabalhar": "Morar e Trabalhar nos EUA",
     "empreender": "Empreender / Abrir empresa",
     "investir": "Investir",
@@ -228,6 +233,12 @@ def build_interest_section(data: dict) -> str:
     """Monta a parte do prompt específica do objetivo escolhido."""
     interesse = data.get("interesse", "")
 
+    if interesse == "viajar":
+        return (
+            f"Motivo da viagem: {data.get('motivo_viagem', '')}\n"
+            f"Duração pretendida: {data.get('duracao_viagem', '')}\n"
+            f"Histórico de visto americano: {data.get('historico_visto', '')}\n"
+        )
     if interesse == "morar_trabalhar":
         return (
             f"Área de atuação: {data.get('area', '')}\n"
@@ -263,6 +274,9 @@ def save_lead(data: dict, result: dict) -> None:
         "formacao": data.get("formacao", ""),
         "experiencia": data.get("experiencia", ""),
         "familia": data.get("familia", ""),
+        "motivo_viagem": data.get("motivo_viagem", ""),
+        "duracao_viagem": data.get("duracao_viagem", ""),
+        "historico_visto": data.get("historico_visto", ""),
         "negocio_tipo": data.get("negocio_tipo", ""),
         "capital": data.get("capital", ""),
         "ja_empresa": data.get("ja_empresa", ""),

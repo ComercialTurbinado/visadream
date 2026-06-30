@@ -107,13 +107,15 @@
 <script>
 const STORAGE_KEY = 'visadream_admin_pwd';
 const INTERESSE = {
+  viajar: 'Viajar',
   morar_trabalhar: 'Morar e Trabalhar',
   empreender: 'Empreender',
   investir: 'Investir',
 };
 const FIELD_LABELS = {
   nome: 'Nome', sobrenome: 'Sobrenome', email: 'E-mail', whatsapp: 'WhatsApp',
-  nascimento: 'Nascimento', interesse: 'Objetivo', area: 'Área', formacao: 'Formação',
+  nascimento: 'Nascimento',   interesse: 'Objetivo', area: 'Área', formacao: 'Formação',
+  motivo_viagem: 'Motivo da viagem', duracao_viagem: 'Duração', historico_visto: 'Histórico de visto',
   experiencia: 'Experiência', familia: 'Familiar nos EUA', negocio_tipo: 'Tipo de negócio',
   capital: 'Capital disponível', ja_empresa: 'Já tem empresa', investimento: 'Investimento',
   tipo_investimento: 'Tipo de investimento', cidade: 'Cidade', sonho: 'Sonho',
@@ -158,7 +160,8 @@ function esc(s) {
 
 function renderDetail(lead) {
   const fields = [
-    'whatsapp', 'nascimento', 'area', 'formacao', 'experiencia', 'familia',
+    'whatsapp', 'nascimento', 'motivo_viagem', 'duracao_viagem', 'historico_visto',
+    'area', 'formacao', 'experiencia', 'familia',
     'negocio_tipo', 'capital', 'ja_empresa', 'investimento', 'tipo_investimento',
     'cidade', 'sonho', 'visto_secundario', 'motivo_principal', 'mensagem_sonho',
   ];
