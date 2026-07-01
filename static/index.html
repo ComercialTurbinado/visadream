@@ -471,6 +471,10 @@
           <label for="f-nascimento" class="text-sm text-gray-300 mb-2 block">Data de nascimento <span style="color:var(--gold)">*</span></label>
           <input type="date" id="f-nascimento" name="bday" autocomplete="bday" class="w-full rounded-xl px-4 py-3 text-base"/>
         </div>
+        <label class="flex items-start gap-3 cursor-pointer mt-2">
+          <input type="checkbox" id="f-consent" class="mt-1 w-4 h-4 rounded border-gray-400 accent-yellow-500"/>
+          <span class="text-sm text-gray-300">Li e aceito a <a href="https://d4uimmigration.com/politica-de-privacidade" target="_blank" rel="noopener" class="underline" style="color:var(--gold)">política de privacidade</a> e autorizo o uso dos meus dados para contato sobre imigração. <span style="color:var(--gold)">*</span></span>
+        </label>
       </div>
 
       <div id="cf-turnstile" class="mt-4 flex justify-center"></div>
@@ -635,7 +639,7 @@ const form = {
   negocio_tipo: '', capital: '', ja_empresa: '',
   investimento: '', tipo_investimento: '',
   cidade: '', cidade_outro: '', sonho: '', sonho_outro: '',
-  nome: '', sobrenome: '', email: '', whatsapp: '', nascimento: ''
+  nome: '', sobrenome: '', email: '', whatsapp: '', nascimento: '', consentimento_lgpd: false
 };
 let photoFile = null;
 let currentStep = 1;
@@ -866,6 +870,7 @@ function nextFrom4() {
   form.email      = document.getElementById('f-email').value.trim();
   form.whatsapp   = document.getElementById('f-whatsapp').value.trim();
   form.nascimento = document.getElementById('f-nascimento').value;
+  form.consentimento_lgpd = document.getElementById('f-consent').checked;
 
   if (!form.nome)      return showErr('err-4', 'Por favor, informe seu nome.', document.getElementById('f-nome'));
   if (!form.sobrenome) return showErr('err-4', 'Por favor, informe seu sobrenome.', document.getElementById('f-sobrenome'));
@@ -875,6 +880,8 @@ function nextFrom4() {
     return showErr('err-4', 'Informe um WhatsApp válido com DDD.', document.getElementById('f-whatsapp'));
   if (!form.nascimento)
     return showErr('err-4', 'Informe sua data de nascimento.', document.getElementById('f-nascimento'));
+  if (!form.consentimento_lgpd)
+    return showErr('err-4', 'É necessário aceitar a política de privacidade.', document.getElementById('f-consent'));
 
   goStep(5);
   startAnalysis();

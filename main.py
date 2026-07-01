@@ -5,6 +5,7 @@ import uuid
 import json
 import base64
 import secrets
+import re
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional, Any
@@ -26,6 +27,19 @@ load_dotenv()
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=()"
+    return response
 
 
 def _client_ip(request: Request) -> str:
@@ -99,7 +113,7 @@ CSV_COLUMNS = [
     "negocio_tipo", "capital", "ja_empresa", "investimento", "tipo_investimento",
     "cidade", "sonho", "visto_principal", "visto_secundario", "probabilidade",
     "elegivel", "motivo_principal", "mensagem_sonho", "pontos_fortes", "pontos_atencao",
-    "art_status", "art_url", "token",
+    "consentimento_lgpd", "art_status", "art_url", "token",
 ]
 
 OFFLINE_QUEUE_ENABLED = os.environ.get("ALLOW_OFFLINE_QUEUE", "").strip().lower() in ("1", "true", "yes", "on")
@@ -295,6 +309,7 @@ def save_lead(data: dict, result: dict) -> None:
         "mensagem_sonho": result.get("mensagem_sonho", ""),
         "pontos_fortes": result.get("pontos_fortes") or [],
         "pontos_atencao": result.get("pontos_atencao") or [],
+        "consentimento_lgpd": bool(data.get("consentimento_lgpd")),
     }
 
     if MONGO_ENABLED:
@@ -334,6 +349,37 @@ def sanitize_payload(data: dict, max_len: int = 300) -> dict:
         elif isinstance(v, (int, float, bool)) or v is None:
             out[k] = v
     return out
+
+
+def validate_token(token: str) -> str:
+    token = (token or "").strip()
+    if not TOKEN_RE.match(token):
+        raise HTTPException(400, "Token inválido.")
+    return token
+
+
+def validate_lead_data(data: dict) -> None:
+    """Validação server-side — não bloqueia fila offline no cliente, só na chegada ao servidor."""
+    if not data.get("consentimento_lgpd"):
+        raise HTTPException(400, "É necessário aceitar a política de privacidade.")
+    email = (data.get("email") or "").strip()
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "E-mail inválido.")
+    whatsapp = re.sub(r"\D", "", data.get("whatsapp") or "")
+    if len(whatsapp) < 10:
+        raise HTTPException(400, "WhatsApp inválido.")
+    nome = (data.get("nome") or "").strip()
+    sobrenome = (data.get("sobrenome") or "").strip()
+    if not nome or not sobrenome:
+        raise HTTPException(400, "Nome e sobrenome são obrigatórios.")
+
+
+def csv_safe(value) -> str:
+    """Evita fórmulas maliciosas ao abrir CSV no Excel."""
+    s = "" if value is None else str(value)
+    if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + s
+    return s
 
 
 def run_analysis(data: dict) -> dict:
@@ -618,6 +664,7 @@ async def submit(
         data = sanitize_payload(json.loads(payload))
     except (json.JSONDecodeError, TypeError):
         raise HTTPException(400, "Dados inválidos.")
+    validate_lead_data(data)
 
     # Foto é opcional — valida tipo e tamanho quando enviada.
     photo_bytes = None
@@ -655,6 +702,7 @@ async def submit(
 
 @app.get("/api/art-status")
 async def art_status(token: str):
+    token = validate_token(token)
     job = job_get(token)
     if not job:
         raise HTTPException(404, "Link inválido ou expirado.")
@@ -671,6 +719,7 @@ async def art_status(token: str):
 @app.get("/api/art-image")
 async def art_image(token: str):
     """Serve a arte guardada no GridFS — acesso só com o token (gated)."""
+    token = validate_token(token)
     if not MONGO_ENABLED:
         raise HTTPException(404, "Indisponível.")
     job = job_get(token)
@@ -783,14 +832,18 @@ def leads_to_csv(leads: list[dict]) -> str:
             row["elegivel"] = "Sim"
         elif row.get("elegivel") is False:
             row["elegivel"] = "Não"
-        writer.writerow({col: row.get(col, "") for col in CSV_COLUMNS})
+        if row.get("consentimento_lgpd") is True:
+            row["consentimento_lgpd"] = "Sim"
+        elif row.get("consentimento_lgpd") is False:
+            row["consentimento_lgpd"] = "Não"
+        writer.writerow({col: csv_safe(row.get(col, "")) for col in CSV_COLUMNS})
     return buf.getvalue()
 
 
 @app.get("/api/admin/status")
 async def admin_status():
     """Indica se o painel está configurado (sem expor a senha)."""
-    return JSONResponse({"configured": bool(ADMIN_PASSWORD), "password_len": len(ADMIN_PASSWORD) if ADMIN_PASSWORD else 0})
+    return JSONResponse({"configured": bool(ADMIN_PASSWORD)})
 
 
 @app.get("/admin", response_class=HTMLResponse)

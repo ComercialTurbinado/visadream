@@ -113,8 +113,10 @@ const INTERESSE = {
   investir: 'Investir',
 };
 const FIELD_LABELS = {
+  created_at: 'Data de cadastro',
   nome: 'Nome', sobrenome: 'Sobrenome', email: 'E-mail', whatsapp: 'WhatsApp',
-  nascimento: 'Nascimento',   interesse: 'Objetivo', area: 'Área', formacao: 'Formação',
+  nascimento: 'Nascimento', consentimento_lgpd: 'Consentimento LGPD',
+  interesse: 'Objetivo', area: 'Área', formacao: 'Formação',
   motivo_viagem: 'Motivo da viagem', duracao_viagem: 'Duração', historico_visto: 'Histórico de visto',
   experiencia: 'Experiência', familia: 'Familiar nos EUA', negocio_tipo: 'Tipo de negócio',
   capital: 'Capital disponível', ja_empresa: 'Já tem empresa', investimento: 'Investimento',
@@ -122,8 +124,44 @@ const FIELD_LABELS = {
   visto_principal: 'Visto principal', visto_secundario: 'Visto secundário',
   probabilidade: 'Probabilidade', elegivel: 'Elegível', motivo_principal: 'Motivo principal',
   mensagem_sonho: 'Mensagem personalizada', pontos_fortes: 'Pontos fortes',
-  pontos_atencao: 'Pontos de atenção', token: 'Token', art_status: 'Status da arte',
+  pontos_atencao: 'Pontos de atenção', art_status: 'Status da arte', art_url: 'URL da arte',
+  token: 'Token',
 };
+
+/** Todos os campos do lead, na ordem do CSV — exibidos sempre no painel expandido. */
+const DETAIL_SECTIONS = [
+  {
+    title: 'Cadastro',
+    fields: ['created_at', 'nome', 'sobrenome', 'email', 'whatsapp', 'nascimento', 'consentimento_lgpd'],
+  },
+  {
+    title: 'Perfil e objetivo',
+    fields: ['interesse', 'area', 'formacao', 'experiencia', 'familia'],
+  },
+  {
+    title: 'Viagem',
+    fields: ['motivo_viagem', 'duracao_viagem', 'historico_visto'],
+  },
+  {
+    title: 'Negócio / investimento',
+    fields: ['negocio_tipo', 'capital', 'ja_empresa', 'investimento', 'tipo_investimento'],
+  },
+  {
+    title: 'Sonho e destino',
+    fields: ['cidade', 'sonho'],
+  },
+  {
+    title: 'Análise de visto (IA)',
+    fields: [
+      'visto_principal', 'visto_secundario', 'probabilidade', 'elegivel',
+      'motivo_principal', 'mensagem_sonho', 'pontos_fortes', 'pontos_atencao',
+    ],
+  },
+  {
+    title: 'Arte e sistema',
+    fields: ['art_status', 'art_url', 'token'],
+  },
+];
 
 let allLeads = [];
 let authPwd = '';
@@ -158,32 +196,52 @@ function esc(s) {
   return d.innerHTML;
 }
 
+function formatFieldValue(key, val, lead) {
+  if (key === 'created_at') return fmtDate(val || lead.timestamp);
+  if (key === 'interesse') return INTERESSE[val] || val || '—';
+  if (key === 'elegivel' || key === 'consentimento_lgpd') {
+    if (val === true) return 'Sim';
+    if (val === false) return 'Não';
+    return '—';
+  }
+  if (key === 'art_status') {
+    const map = { done: 'Pronta', processing: 'Gerando', failed: 'Falhou' };
+    return map[val] || val || '—';
+  }
+  if (key === 'art_url') {
+    if (!val) return '—';
+    return `<a href="${esc(val)}" target="_blank" rel="noopener" class="underline text-amber-200/90 break-all">${esc(val)}</a>`;
+  }
+  if (Array.isArray(val)) return val.length ? val.map(esc).join(' · ') : '—';
+  if (val === null || val === undefined || val === '') return '—';
+  return esc(String(val));
+}
+
 function renderDetail(lead) {
-  const fields = [
-    'whatsapp', 'nascimento', 'motivo_viagem', 'duracao_viagem', 'historico_visto',
-    'area', 'formacao', 'experiencia', 'familia',
-    'negocio_tipo', 'capital', 'ja_empresa', 'investimento', 'tipo_investimento',
-    'cidade', 'sonho', 'visto_secundario', 'motivo_principal', 'mensagem_sonho',
-  ];
-  let html = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">';
-  for (const key of fields) {
-    let val = lead[key];
-    if (!val && val !== false) continue;
-    if (key === 'elegivel') val = val ? 'Sim' : 'Não';
-    if (Array.isArray(val)) val = val.join(' · ');
-    html += `<div><p class="field-label">${FIELD_LABELS[key] || key}</p><p class="field-value">${esc(String(val))}</p></div>`;
+  let html = '<div class="py-4 space-y-6">';
+
+  for (const section of DETAIL_SECTIONS) {
+    html += `<div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-amber-200/80 mb-3">${esc(section.title)}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">`;
+
+    for (const key of section.fields) {
+      const val = lead[key];
+      const display = formatFieldValue(key, val, lead);
+      html += `<div>
+        <p class="field-label">${FIELD_LABELS[key] || key}</p>
+        <p class="field-value break-words">${display}</p>
+      </div>`;
+    }
+
+    html += '</div></div>';
   }
-  if (lead.pontos_fortes?.length) {
-    html += `<div class="sm:col-span-2"><p class="field-label">Pontos fortes</p><p class="field-value">${lead.pontos_fortes.map(esc).join(' · ')}</p></div>`;
-  }
-  if (lead.pontos_atencao?.length) {
-    html += `<div class="sm:col-span-2"><p class="field-label">Pontos de atenção</p><p class="field-value">${lead.pontos_atencao.map(esc).join(' · ')}</p></div>`;
-  }
+
   html += '</div>';
 
   if (lead.art_url && lead.art_status === 'done') {
-    html += `<div class="pt-2 pb-4">
-      <p class="field-label mb-2">Arte gerada</p>
+    html += `<div class="pt-2 pb-4 border-t border-white/10">
+      <p class="field-label mb-2">Pré-visualização da arte</p>
       <a href="${esc(lead.art_url)}" target="_blank" rel="noopener">
         <img src="${esc(lead.art_url)}" alt="Arte" class="art-preview" loading="lazy"/>
       </a>
