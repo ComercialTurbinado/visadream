@@ -22,8 +22,15 @@ App: FastAPI (Python) + HTML estático. Geração de imagem leva ~40s (medium).
 | `MONGODB_DB` | não | Nome do banco (padrão `visadream`) |
 | `HUBSPOT_TOKEN` | (futuro) | Private app token do HubSpot |
 | `ADMIN_PASSWORD` | ✅ (admin) | Senha do painel `/admin` (leads + CSV) |
+| `ALLOW_OFFLINE_QUEUE` | recomendada (eventos) | `1` = aceita envios sincronizados da fila offline (`__offline_queue__`) |
 
 > Nunca commitar `.env`. Em produção, setar via env vars do Lightsail/AWS Secrets Manager.
+
+## Modo offline (eventos com internet instável)
+- O formulário salva leads no **IndexedDB** do navegador quando não há conexão.
+- Um **Service Worker** permite reabrir o formulário sem internet.
+- Quando a conexão volta, os cadastros são **enviados automaticamente** (a cada 30s ou ao voltar online).
+- Em produção para eventos, defina `ALLOW_OFFLINE_QUEUE=1` no EasyPanel.
 
 ## Painel de leads (`/admin`)
 - Acesse `https://seu-dominio/admin` com a senha definida em `ADMIN_PASSWORD`.

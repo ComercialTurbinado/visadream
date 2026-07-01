@@ -45,6 +45,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 def verify_turnstile(token: str, remoteip: str = "") -> bool:
     """Valida o Cloudflare Turnstile. Desativado (passa direto) quando não há
     TURNSTILE_SECRET — assim local/dev funciona; em produção, setar a chave ativa."""
+    if token == "__offline_queue__" and OFFLINE_QUEUE_ENABLED:
+        return True
     secret = os.environ.get("TURNSTILE_SECRET", "")
     if not secret:
         return True
@@ -100,6 +102,7 @@ CSV_COLUMNS = [
     "art_status", "art_url", "token",
 ]
 
+OFFLINE_QUEUE_ENABLED = os.environ.get("ALLOW_OFFLINE_QUEUE", "").strip().lower() in ("1", "true", "yes", "on")
 _mongo_db = None
 _mongo_fs = None
 
@@ -592,7 +595,10 @@ def _art_job(token: str, photo_bytes: bytes, prompt: str,
 @app.get("/api/config")
 async def config():
     # Só a site key (pública). O segredo do Turnstile NUNCA sai do servidor.
-    return JSONResponse({"turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", "")})
+    return JSONResponse({
+        "turnstile_site_key": os.environ.get("TURNSTILE_SITE_KEY", ""),
+        "offline_queue": OFFLINE_QUEUE_ENABLED,
+    })
 
 
 @app.post("/api/submit")

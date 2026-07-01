@@ -56,6 +56,16 @@
     justify-content: center;
   }
 
+  #offline-banner {
+    border: 1px solid rgba(208,177,33,0.45);
+    background: rgba(30,42,68,0.95);
+    backdrop-filter: blur(12px);
+  }
+  #conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+  #conn-dot.offline { background: #f87171; }
+  #conn-dot.syncing { background: #facc15; animation: pulse-soft 1s ease-in-out infinite; }
+  @keyframes pulse-soft { 0%,100% { opacity: .5 } 50% { opacity: 1 } }
+
   /* Botões de RESPOSTA — fundo branco, texto azul */
   .option-btn {
     background: #ffffff;
@@ -170,11 +180,17 @@
       <span style="color:var(--gold)">D4U</span> Immigration
     </span>
   </div>
-  <div class="flex items-center gap-2" id="progress-dots" role="progressbar" aria-label="Progresso" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
-    <div class="progress-dot active" id="dot-1"></div>
-    <div class="progress-dot" id="dot-2"></div>
-    <div class="progress-dot" id="dot-3"></div>
-    <div class="progress-dot" id="dot-4"></div>
+  <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 text-xs text-gray-300" id="conn-status" title="Status da conexão">
+      <span id="conn-dot"></span>
+      <span id="conn-label">Online</span>
+    </div>
+    <div class="flex items-center gap-2" id="progress-dots" role="progressbar" aria-label="Progresso" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
+      <div class="progress-dot active" id="dot-1"></div>
+      <div class="progress-dot" id="dot-2"></div>
+      <div class="progress-dot" id="dot-3"></div>
+      <div class="progress-dot" id="dot-4"></div>
+    </div>
   </div>
 </header>
 
@@ -527,8 +543,38 @@
     </div>
   </div>
 
+  <!-- STEP offline: salvo localmente -->
+  <div class="step" id="step-offline">
+    <div class="fade-up pt-6 text-center">
+      <div class="text-5xl mb-4" aria-hidden="true">📴</div>
+      <p class="font-semibold text-sm mb-2 uppercase tracking-widest" style="color:var(--gold)">Salvo neste dispositivo</p>
+      <h2 class="text-3xl font-bold mb-4" id="offline-titulo">Recebemos seus dados!</h2>
+      <div class="card rounded-2xl p-6 mb-4 text-left max-w-md mx-auto">
+        <p class="text-gray-100 text-base leading-relaxed" id="offline-msg">
+          A internet está instável ou indisponível. Seu cadastro foi guardado com segurança neste aparelho e será enviado automaticamente assim que a conexão voltar.
+        </p>
+        <p class="text-gray-400 text-sm mt-4" id="offline-queue-info"></p>
+      </div>
+      <button class="btn-primary px-8 py-3 rounded-xl" id="btn-offline-sync" onclick="processOfflineQueue(true)">Tentar enviar agora</button>
+      <div class="text-center mt-6">
+        <button class="text-gray-400 text-sm underline" onclick="restart()">Novo cadastro</button>
+      </div>
+    </div>
+  </div>
+
 </main>
 
+<div id="offline-banner" class="hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4 pointer-events-none">
+  <div id="offline-banner-inner" class="card max-w-2xl mx-auto rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 pointer-events-auto">
+    <div>
+      <p class="font-semibold text-sm" id="offline-banner-title">Cadastros pendentes</p>
+      <p class="text-xs text-gray-300" id="offline-banner-msg">Aguardando internet para sincronizar.</p>
+    </div>
+    <button type="button" id="btn-sync-banner" class="btn-primary px-4 py-2 rounded-xl text-sm" onclick="processOfflineQueue(true)">Sincronizar</button>
+  </div>
+</div>
+
+<script src="/static/offline-queue.js"></script>
 <script>
 // ── Stars ──────────────────────────────────────────────────────────
 const starsEl = document.getElementById('stars');
@@ -544,25 +590,42 @@ for (let i = 0; i < 100; i++) {
   starsEl.appendChild(s);
 }
 
-// ── Turnstile (anti-bot) — só ativa se houver site key configurada ──
+// ── Turnstile + config + Service Worker ───────────────────────────
 let turnstileWidgetId = null;
+let offlineQueueEnabled = false;
+let isSyncingQueue = false;
+
 window.onTurnstileLoad = function () {
   if (window.turnstile && window.__cfSiteKey) {
     try { turnstileWidgetId = turnstile.render('#cf-turnstile', { sitekey: window.__cfSiteKey, theme: 'dark' }); }
     catch (e) { /* já renderizado */ }
   }
 };
-(async function initTurnstile() {
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+}
+
+(async function initApp() {
   try {
-    const cfg = await fetch('/api/config').then(r => r.json());
-    if (!cfg || !cfg.turnstile_site_key) return;
-    window.__cfSiteKey = cfg.turnstile_site_key;
-    const s = document.createElement('script');
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
-    s.async = true; s.defer = true;
-    document.head.appendChild(s);
-  } catch (e) { /* sem Turnstile: segue sem bloquear */ }
+    const cfg = await fetch('/api/config', { cache: 'no-store' }).then(r => r.json());
+    offlineQueueEnabled = !!(cfg && cfg.offline_queue);
+    if (cfg && cfg.turnstile_site_key) {
+      window.__cfSiteKey = cfg.turnstile_site_key;
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+      s.async = true; s.defer = true;
+      document.head.appendChild(s);
+    }
+  } catch (e) { /* offline na abertura — segue com fila local */ }
+  updateConnectionUI();
+  updateOfflineBanner();
+  processOfflineQueue(false);
 })();
+
+window.addEventListener('online', () => { updateConnectionUI(); processOfflineQueue(false); });
+window.addEventListener('offline', () => updateConnectionUI());
+setInterval(() => { updateOfflineBanner(); processOfflineQueue(false); }, 30000);
 
 // ── State ──────────────────────────────────────────────────────────
 const form = {
@@ -832,31 +895,189 @@ function handleFile(input) {
   reader.readAsDataURL(file);
 }
 
+// ── Offline / rede ─────────────────────────────────────────────────
+async function checkServerReachable() {
+  if (!navigator.onLine) return false;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch('/api/config', { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(t);
+    return r.ok;
+  } catch { return false; }
+}
+
+function isNetworkError(err) {
+  if (!err) return false;
+  if (err.name === 'AbortError') return true;
+  const msg = String(err.message || '');
+  return msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed');
+}
+
+async function getTurnstileToken() {
+  if (!window.turnstile || turnstileWidgetId === null) return '';
+  return turnstile.getResponse(turnstileWidgetId) || '';
+}
+
+async function buildLiveFormData() {
+  const turnstile = await getTurnstileToken();
+  if (window.__cfSiteKey && !turnstile && !offlineQueueEnabled) return null;
+  const marker = (!turnstile && offlineQueueEnabled) ? '__offline_queue__' : '';
+  return VisaDreamOffline.buildFormData(
+    { payload: { ...form }, photoName: photoFile?.name, photoType: photoFile?.type, photoData: photoFile ? await fileToBase64Inline(photoFile) : '' },
+    turnstile,
+    marker
+  );
+}
+
+function fileToBase64Inline(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+async function postSubmit(fd, timeoutMs = 30000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const resp = await fetch('/api/submit', { method: 'POST', body: fd, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!resp.ok) throw new Error('Falha no envio (' + resp.status + ')');
+    return await resp.json();
+  } catch (e) {
+    clearTimeout(t);
+    throw e;
+  }
+}
+
+async function saveOfflineAndShow() {
+  await VisaDreamOffline.enqueue({ payload: { ...form }, photoFile });
+  const n = await VisaDreamOffline.count();
+  document.getElementById('offline-titulo').textContent = `${form.nome}, seus dados foram salvos!`;
+  document.getElementById('offline-queue-info').textContent =
+    n === 1 ? '1 cadastro aguardando envio.' : `${n} cadastros aguardando envio neste aparelho.`;
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-offline').classList.add('active');
+  updateOfflineBanner();
+  updateConnectionUI();
+}
+
+async function processOfflineQueue(manual) {
+  if (isSyncingQueue) return;
+  const items = await VisaDreamOffline.list();
+  if (!items.length) {
+    updateOfflineBanner();
+    return;
+  }
+  const online = await checkServerReachable();
+  if (!online) {
+    updateConnectionUI();
+    if (manual) alert('Ainda sem conexão com o servidor. Os dados continuam salvos neste aparelho.');
+    return;
+  }
+
+  isSyncingQueue = true;
+  updateConnectionUI(true);
+  let lastToken = null;
+
+  for (const item of items) {
+    try {
+      let turnstile = await getTurnstileToken();
+      if (window.__cfSiteKey && !turnstile && !offlineQueueEnabled) {
+        if (manual) {
+          alert('Confirme o captcha de segurança no formulário e toque em Sincronizar novamente.');
+          break;
+        }
+        continue;
+      }
+      const marker = (!turnstile && offlineQueueEnabled) ? '__offline_queue__' : '';
+      const fd = await VisaDreamOffline.buildFormData(item, turnstile, marker);
+      const result = await postSubmit(fd);
+      await VisaDreamOffline.remove(item.id);
+      lastToken = result.token;
+    } catch (e) {
+      item.attempts = (item.attempts || 0) + 1;
+      item.lastError = e.message || String(e);
+      await VisaDreamOffline.update(item);
+      if (isNetworkError(e)) break;
+    }
+  }
+
+  isSyncingQueue = false;
+  updateConnectionUI();
+  updateOfflineBanner();
+
+  if (lastToken && manual && (await VisaDreamOffline.count()) === 0) {
+    window.location.href = '/arte?token=' + encodeURIComponent(lastToken);
+  }
+}
+
+async function updateConnectionUI(syncing) {
+  const dot = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  if (!dot || !label) return;
+  dot.classList.remove('offline', 'syncing');
+  if (syncing) {
+    dot.classList.add('syncing');
+    label.textContent = 'Sincronizando…';
+    return;
+  }
+  const ok = await checkServerReachable();
+  if (!ok) {
+    dot.classList.add('offline');
+    label.textContent = 'Offline';
+  } else {
+    label.textContent = 'Online';
+  }
+}
+
+async function updateOfflineBanner() {
+  const n = await VisaDreamOffline.count();
+  const banner = document.getElementById('offline-banner');
+  if (!banner) return;
+  if (n > 0) {
+    banner.classList.remove('hidden');
+    document.getElementById('offline-banner-title').textContent =
+      n === 1 ? '1 cadastro pendente' : `${n} cadastros pendentes`;
+    document.getElementById('offline-banner-msg').textContent =
+      navigator.onLine ? 'Toque em Sincronizar ou aguarde o envio automático.' : 'Sem internet — os dados estão salvos neste aparelho.';
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
 // ── Analysis ───────────────────────────────────────────────────────
 async function startAnalysis() {
   try {
     updateLoadingStep(1);
     resolveOutroFields();
-    const fd = new FormData();
-    fd.append('payload', JSON.stringify(form));
-    if (photoFile) fd.append('photo', photoFile);
 
-    // Token anti-bot (quando o Turnstile está ativo)
-    if (window.turnstile && turnstileWidgetId !== null) {
-      const t = turnstile.getResponse(turnstileWidgetId);
-      if (!t) { goStep(4); showErr('err-4', 'Confirme que você não é um robô.'); return; }
-      fd.append('cf_turnstile_response', t);
+    const online = await checkServerReachable();
+    if (!online) {
+      await saveOfflineAndShow();
+      return;
     }
 
-    const resp = await fetch('/api/submit', { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error('Falha no envio (' + resp.status + ')');
-    const { token } = await resp.json();
+    const fd = await buildLiveFormData();
+    if (!fd) {
+      goStep(4);
+      showErr('err-4', 'Confirme que você não é um robô.');
+      return;
+    }
 
-    // Redireciona pra página da arte com o token exclusivo na URL.
+    updateLoadingStep(2);
+    const { token } = await postSubmit(fd);
     window.location.href = '/arte?token=' + encodeURIComponent(token);
   } catch (err) {
+    if (isNetworkError(err)) {
+      await saveOfflineAndShow();
+      return;
+    }
     goStep(4);
-    alert('Ocorreu um erro: ' + err.message);
+    alert('Ocorreu um erro: ' + (err.message || 'tente novamente'));
   }
 }
 
