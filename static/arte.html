@@ -22,7 +22,6 @@
   }
   .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(208,177,33,0.4); filter: brightness(1.05); }
 
-  /* Moldura 9:16 da arte */
   .art-frame {
     position: relative; width: 100%; max-width: 320px; margin: 0 auto;
     aspect-ratio: 9 / 16; border-radius: 20px; overflow: hidden;
@@ -51,7 +50,6 @@
 
   @media (prefers-reduced-motion: reduce) { .pulse-soft, .spinner { animation: none; } }
 
-  /* Celular: encolhe o quadro e os espaçamentos pra tudo caber na tela */
   @media (max-width: 640px) {
     header { padding-top: 12px; padding-bottom: 6px; }
     #view-main { padding-top: 0 !important; }
@@ -74,24 +72,21 @@
 
 <main class="relative z-10 max-w-xl mx-auto px-6 pb-20">
 
-  <!-- Estado: carregando token -->
   <div id="view-loading" class="text-center pt-16">
     <div class="w-10 h-10 rounded-full border-2 spinner mx-auto" style="border-color:var(--gold)"></div>
-    <p class="text-gray-300 mt-4">Carregando…</p>
+    <p class="text-gray-300 mt-4" data-i18n="arte.loading">Carregando…</p>
   </div>
 
-  <!-- Estado: erro / link inválido -->
   <div id="view-error" class="hidden text-center pt-16">
     <div class="text-5xl mb-4" aria-hidden="true">🔒</div>
-    <h1 class="text-2xl font-bold mb-2">Link inválido ou expirado</h1>
-    <p class="text-gray-300">Refaça o questionário para gerar um novo acesso.</p>
-    <a href="/" class="btn-primary inline-block px-8 py-3 rounded-xl mt-6">Voltar ao início</a>
+    <h1 class="text-2xl font-bold mb-2" data-i18n="arte.error.title">Link inválido ou expirado</h1>
+    <p class="text-gray-300" data-i18n="arte.error.sub">Refaça o questionário para gerar um novo acesso.</p>
+    <a href="/" class="btn-primary inline-block px-8 py-3 rounded-xl mt-6" data-i18n="arte.error.back">Voltar ao início</a>
   </div>
 
-  <!-- Estado: resultado + arte -->
   <div id="view-main" class="hidden pt-4">
     <div class="text-center mb-8">
-      <p class="font-semibold text-sm mb-2 uppercase tracking-widest" style="color:var(--gold)">Seu resultado</p>
+      <p class="font-semibold text-sm mb-2 uppercase tracking-widest" style="color:var(--gold)" data-i18n="arte.result.badge">Seu resultado</p>
       <h1 class="text-3xl font-bold" id="r-titulo">—</h1>
     </div>
 
@@ -99,39 +94,37 @@
       <p class="text-gray-100 leading-relaxed" id="r-mensagem"></p>
     </div>
 
-    <!-- Bloco da arte -->
     <div id="art-block">
       <div class="art-frame mb-4">
         <canvas id="gen-canvas" width="270" height="480" aria-hidden="true"></canvas>
         <img id="art-final" class="art-final" alt="Sua arte personalizada"/>
         <div class="gen-overlay" id="gen-overlay">
-          <p class="font-semibold pulse-soft" style="color:var(--navy)">✨ Sua arte está sendo gerada…</p>
-          <p class="text-sm mt-1" style="color:rgba(30,42,68,0.7)">Estamos pintando cada detalhe do seu sonho. Volte a esta tela em instantes!</p>
+          <p class="font-semibold pulse-soft" style="color:var(--navy)" data-i18n="arte.gen.title">✨ Sua arte está sendo gerada…</p>
+          <p class="text-sm mt-1" style="color:rgba(30,42,68,0.7)" data-i18n="arte.gen.sub">Estamos pintando cada detalhe do seu sonho. Volte a esta tela em instantes!</p>
         </div>
       </div>
 
       <div id="art-done" class="hidden text-center">
-        <a id="download-btn" href="#" download="minha-arte-d4u.png" class="btn-primary inline-block px-8 py-3 rounded-xl">⬇️ Baixar minha arte</a>
-        <p class="text-gray-400 text-xs mt-3">Guarde este link — você pode voltar aqui quando quiser para baixar sua arte.</p>
+        <a id="download-btn" href="#" download="minha-arte-d4u.png" class="btn-primary inline-block px-8 py-3 rounded-xl" data-i18n="arte.download">⬇️ Baixar minha arte</a>
+        <p class="text-gray-400 text-xs mt-3" data-i18n="arte.download.hint">Guarde este link — você pode voltar aqui quando quiser para baixar sua arte.</p>
       </div>
 
       <div id="art-failed" class="hidden card rounded-2xl p-5 text-center">
-        <p class="text-gray-200 text-sm">Não foi possível gerar sua arte agora. Nossa equipe já está com seus dados e vai te ajudar. 💛</p>
+        <p class="text-gray-200 text-sm" data-i18n="arte.failed">Não foi possível gerar sua arte agora. Nossa equipe já está com seus dados e vai te ajudar. 💛</p>
       </div>
     </div>
 
-    <!-- CTA D4U -->
     <div class="card rounded-2xl p-6 text-center mt-6" style="border:1px solid rgba(208,177,33,0.4); background: rgba(208,177,33,0.08)">
-      <p class="text-lg font-semibold mb-2">Quer transformar esse sonho em realidade? 🚀</p>
-      <p class="text-gray-300 text-sm mb-5">A D4U Immigration tem 91% de taxa de sucesso e garantia de devolução do dinheiro.</p>
-      <a href="https://www.d4uimmigration.com" target="_blank" rel="noopener" class="btn-primary inline-block px-8 py-3 rounded-xl">Falar com especialista →</a>
+      <p class="text-lg font-semibold mb-2" data-i18n="arte.cta.title">Quer transformar esse sonho em realidade? 🚀</p>
+      <p class="text-gray-300 text-sm mb-5" data-i18n="arte.cta.sub">A D4U Immigration tem 91% de taxa de sucesso e garantia de devolução do dinheiro.</p>
+      <a href="https://www.d4uimmigration.com" target="_blank" rel="noopener" class="btn-primary inline-block px-8 py-3 rounded-xl" data-i18n="arte.cta.btn">Falar com especialista →</a>
     </div>
   </div>
 
 </main>
 
+<script src="/static/i18n.js"></script>
 <script>
-// ── Stars ──────────────────────────────────────────────────────────
 const starsEl = document.getElementById('stars');
 for (let i = 0; i < 80; i++) {
   const s = document.createElement('div'); s.className = 'star';
@@ -141,10 +134,9 @@ for (let i = 0; i < 80; i++) {
 }
 
 const token = new URLSearchParams(location.search).get('token');
+let pageLang = VisaDreamI18n.getLang();
+VisaDreamI18n.applyArtePage(pageLang);
 
-// ── Animação de "processando": campo de pixels que pisca em transição lenta ──
-// Cada pixel some/aparece numa onda suave (sine) com fase própria → cintilação
-// lenta, contínua, até a arte chegar. Tons de azul + dourado esparso.
 let _raf = null;
 function startMosaic() {
   const cv = document.getElementById('gen-canvas');
@@ -161,9 +153,9 @@ function startMosaic() {
       pixels.push({
         x, y,
         color: colors[(Math.random() * colors.length) | 0],
-        max: 1.1 + Math.random() * 1.4,          // tamanho máx do pixel
-        phase: Math.random() * Math.PI * 2,       // fase aleatória (cada um pisca num momento)
-        freq: reduce ? 0 : (1.2 + Math.random() * 1.5), // velocidade do pisca (lento)
+        max: 1.1 + Math.random() * 1.4,
+        phase: Math.random() * Math.PI * 2,
+        freq: reduce ? 0 : (1.2 + Math.random() * 1.5),
       });
     }
   }
@@ -179,7 +171,6 @@ function startMosaic() {
     const t = (now - t0) / 1000;
     ctx.clearRect(0, 0, W, H);
     for (const p of pixels) {
-      // k vai de 0 (apagado) a 1 (aceso) suavemente → "pisca" lento
       const k = p.freq ? (0.5 + 0.5 * Math.sin(p.phase + t * p.freq)) : 0.85;
       const size = p.max * k;
       const o = MAXINT * 0.5 - size * 0.5;
@@ -193,16 +184,22 @@ function startMosaic() {
 }
 function stopMosaic() { if (_raf) { cancelAnimationFrame(_raf); _raf = null; } }
 
-// ── Render dos estados ──────────────────────────────────────────────
 function show(id) { ['view-loading','view-error','view-main'].forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id)); }
+
+function setPageLang(lang) {
+  pageLang = VisaDreamI18n.normalizeLang(lang || pageLang);
+  VisaDreamI18n.applyArtePage(pageLang);
+}
 
 function renderAnalysis(d) {
   const nome = d.nome || '';
-  document.getElementById('r-titulo').textContent =
-    d.elegivel ? `${nome}, você tem perfil! 🎉` : `${nome}, recebemos seus dados! 🙌`;
+  const t = (key, vars) => VisaDreamI18n.arteT(key, pageLang, vars);
+  document.getElementById('r-titulo').textContent = d.elegivel
+    ? t('arte.title.eligible', { nome })
+    : t('arte.title.received', { nome });
   document.getElementById('r-mensagem').textContent = d.elegivel
-    ? (d.mensagem || 'Você tem perfil para realizar o seu sonho americano!')
-    : 'Estamos com os seus dados e em breve alguém da nossa equipe da D4U vai entrar em contato com você. 💛';
+    ? (d.mensagem || t('arte.msg.eligibleDefault'))
+    : t('arte.msg.notEligible');
 }
 
 let revealed = false;
@@ -221,7 +218,6 @@ function revealArt(url) {
 }
 
 function showNoArt() {
-  // Sem foto enviada: esconde o bloco de arte por completo.
   document.getElementById('art-block').classList.add('hidden');
 }
 
@@ -231,7 +227,6 @@ function showFailed() {
   document.getElementById('art-failed').classList.remove('hidden');
 }
 
-// ── Polling do status ───────────────────────────────────────────────
 let started = false;
 async function poll() {
   try {
@@ -242,6 +237,7 @@ async function poll() {
 
     if (!started) {
       started = true;
+      setPageLang(d.idioma || pageLang);
       renderAnalysis(d);
       show('view-main');
       if (d.status === 'processing') startMosaic();
@@ -249,11 +245,11 @@ async function poll() {
 
     if (d.status === 'done') {
       if (d.art_url) revealArt(d.art_url); else showNoArt();
-      return; // para o polling
+      return;
     }
     if (d.status === 'failed') { showFailed(); return; }
 
-    setTimeout(poll, 4000); // continua aguardando
+    setTimeout(poll, 4000);
   } catch (e) {
     setTimeout(poll, 5000);
   }

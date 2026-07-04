@@ -276,7 +276,59 @@ window.VisaDreamI18n = (function () {
     return d[lang] || d.pt;
   }
 
+  const ARTE_STRINGS = {
+    'arte.page.title': { pt: 'Sua arte — VisaDream · D4U', en: 'Your art — VisaDream · D4U' },
+    'arte.loading': { pt: 'Carregando…', en: 'Loading…' },
+    'arte.error.title': { pt: 'Link inválido ou expirado', en: 'Invalid or expired link' },
+    'arte.error.sub': { pt: 'Refaça o questionário para gerar um novo acesso.', en: 'Complete the questionnaire again to get a new access link.' },
+    'arte.error.back': { pt: 'Voltar ao início', en: 'Back to start' },
+    'arte.result.badge': { pt: 'Seu resultado', en: 'Your result' },
+    'arte.title.eligible': { pt: '{nome}, você tem perfil! 🎉', en: '{nome}, you have a strong profile! 🎉' },
+    'arte.title.received': { pt: '{nome}, recebemos seus dados! 🙌', en: '{nome}, we received your details! 🙌' },
+    'arte.msg.eligibleDefault': { pt: 'Você tem perfil para realizar o seu sonho americano!', en: 'You have a profile to pursue your American dream!' },
+    'arte.msg.notEligible': { pt: 'Estamos com os seus dados e em breve alguém da nossa equipe da D4U vai entrar em contato com você. 💛', en: 'We have your details and someone from the D4U team will contact you soon. 💛' },
+    'arte.gen.title': { pt: '✨ Sua arte está sendo gerada…', en: '✨ Your art is being created…' },
+    'arte.gen.sub': { pt: 'Estamos pintando cada detalhe do seu sonho. Volte a esta tela em instantes!', en: 'We are drawing every detail of your dream. Check back here in a moment!' },
+    'arte.download': { pt: '⬇️ Baixar minha arte', en: '⬇️ Download my art' },
+    'arte.download.hint': { pt: 'Guarde este link — você pode voltar aqui quando quiser para baixar sua arte.', en: 'Save this link — you can come back anytime to download your art.' },
+    'arte.download.filename': { pt: 'minha-arte-d4u.png', en: 'my-art-d4u.png' },
+    'arte.failed': { pt: 'Não foi possível gerar sua arte agora. Nossa equipe já está com seus dados e vai te ajudar. 💛', en: 'We could not generate your art right now. Our team already has your details and will help you. 💛' },
+    'arte.cta.title': { pt: 'Quer transformar esse sonho em realidade? 🚀', en: 'Ready to turn this dream into reality? 🚀' },
+    'arte.cta.sub': { pt: 'A D4U Immigration tem 91% de taxa de sucesso e garantia de devolução do dinheiro.', en: 'D4U Immigration has a 91% success rate and a money-back guarantee.' },
+    'arte.cta.btn': { pt: 'Falar com especialista →', en: 'Talk to a specialist →' },
+    'arte.img.alt': { pt: 'Sua arte personalizada', en: 'Your personalized art' },
+  };
+
+  function normalizeLang(code) {
+    return (code || '').toLowerCase().startsWith('en') ? 'en' : 'pt';
+  }
+
+  function arteT(key, langCode, vars) {
+    const l = normalizeLang(langCode || lang);
+    const item = ARTE_STRINGS[key];
+    let text = item ? (item[l] || item.pt) : key;
+    if (vars) Object.keys(vars).forEach(k => { text = text.replace(`{${k}}`, vars[k]); });
+    return text;
+  }
+
+  function applyArtePage(langCode) {
+    const l = normalizeLang(langCode || lang);
+    document.documentElement.lang = l === 'en' ? 'en' : 'pt-BR';
+    document.title = arteT('arte.page.title', l);
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      const val = arteT(key, l);
+      if (el.getAttribute('data-i18n-html') === '1') el.innerHTML = val;
+      else el.textContent = val;
+    });
+    const img = document.getElementById('art-final');
+    if (img) img.alt = arteT('arte.img.alt', l);
+    const dl = document.getElementById('download-btn');
+    if (dl) dl.setAttribute('download', arteT('arte.download.filename', l));
+  }
+
   return {
     t, getLang, setLang, applyLanguage, branchCopy, dreamSuggestions, OPTION_LABELS,
+    arteT, applyArtePage, normalizeLang,
   };
 })();

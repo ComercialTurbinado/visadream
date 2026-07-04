@@ -753,6 +753,7 @@ async def submit(
         "nome": result.get("nome", ""),
         "elegivel": result.get("elegivel", None),
         "mensagem": result.get("mensagem_sonho", ""),
+        "idioma": normalize_idioma(data),
         "status": "processing" if photo_bytes else "done",
     })
     save_lead({**data, "token": token}, result)
@@ -778,13 +779,16 @@ async def art_status(token: str):
     if not job:
         raise HTTPException(404, "Link inválido ou expirado.")
     # Devolve só o necessário — nunca e-mail/telefone.
-    return JSONResponse({
+    payload = {
         "nome": job.get("nome", ""),
         "elegivel": job.get("elegivel"),
         "mensagem": job.get("mensagem", ""),
         "status": job.get("status"),
         "art_url": job.get("art_url"),
-    })
+    }
+    if job.get("idioma"):
+        payload["idioma"] = job["idioma"]
+    return JSONResponse(payload)
 
 
 @app.get("/api/art-image")
