@@ -115,7 +115,8 @@ const INTERESSE = {
 const FIELD_LABELS = {
   created_at: 'Data de cadastro',
   nome: 'Nome', sobrenome: 'Sobrenome', email: 'E-mail', whatsapp: 'WhatsApp',
-  nascimento: 'Nascimento', consentimento_lgpd: 'Consentimento LGPD',
+  whatsapp_pais: 'País do telefone', nascimento: 'Nascimento', pais_nascimento: 'País de nascimento',
+  idioma: 'Idioma', consentimento_lgpd: 'Consentimento LGPD',
   interesse: 'Objetivo', area: 'Área', formacao: 'Formação',
   motivo_viagem: 'Motivo da viagem', duracao_viagem: 'Duração', historico_visto: 'Histórico de visto',
   experiencia: 'Experiência', familia: 'Familiar nos EUA', negocio_tipo: 'Tipo de negócio',
@@ -132,7 +133,7 @@ const FIELD_LABELS = {
 const DETAIL_SECTIONS = [
   {
     title: 'Cadastro',
-    fields: ['created_at', 'nome', 'sobrenome', 'email', 'whatsapp', 'nascimento', 'consentimento_lgpd'],
+    fields: ['created_at', 'nome', 'sobrenome', 'email', 'whatsapp', 'whatsapp_pais', 'nascimento', 'pais_nascimento', 'idioma', 'consentimento_lgpd'],
   },
   {
     title: 'Perfil e objetivo',
@@ -199,6 +200,7 @@ function esc(s) {
 function formatFieldValue(key, val, lead) {
   if (key === 'created_at') return fmtDate(val || lead.timestamp);
   if (key === 'interesse') return INTERESSE[val] || val || '—';
+  if (key === 'idioma') return val === 'en' ? 'English' : val === 'pt' ? 'Português' : (val || '—');
   if (key === 'elegivel' || key === 'consentimento_lgpd') {
     if (val === true) return 'Sim';
     if (val === false) return 'Não';

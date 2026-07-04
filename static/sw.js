@@ -1,9 +1,11 @@
 /* Service Worker — permite abrir o formulário sem internet (cache básico). */
-const CACHE = 'visadream-v1';
+const CACHE = 'visadream-v2';
 const PRECACHE = [
   '/',
   '/static/index.html',
   '/static/offline-queue.js',
+  '/static/i18n.js',
+  '/static/phone-utils.js',
   '/static/d4u-logo.png',
 ];
 

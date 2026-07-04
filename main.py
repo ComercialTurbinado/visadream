@@ -107,7 +107,8 @@ if ADMIN_PASSWORD:
     print(f"[admin] ADMIN_PASSWORD configurado (len={len(ADMIN_PASSWORD)})")
 
 CSV_COLUMNS = [
-    "created_at", "nome", "sobrenome", "email", "whatsapp", "nascimento",
+    "created_at", "nome", "sobrenome", "email", "whatsapp", "whatsapp_pais", "nascimento",
+    "pais_nascimento", "idioma",
     "interesse", "area", "formacao", "experiencia", "familia",
     "motivo_viagem", "duracao_viagem", "historico_visto",
     "negocio_tipo", "capital", "ja_empresa", "investimento", "tipo_investimento",
@@ -171,7 +172,7 @@ def get_openai():
     return OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 
-def get_zodiac(birth_str: str) -> dict:
+def get_zodiac(birth_str: str, lang: str = "pt") -> dict:
     try:
         bd = datetime.strptime(birth_str, "%Y-%m-%d")
     except Exception:
@@ -179,24 +180,30 @@ def get_zodiac(birth_str: str) -> dict:
 
     m, d = bd.month, bd.day
     signs = [
-        (1, 20, "Capricórnio", "Terra", "determinado e ambicioso"),
-        (2, 19, "Aquário",     "Ar",    "inovador e independente"),
-        (3, 20, "Peixes",      "Água",  "intuitivo e criativo"),
-        (4, 20, "Áries",       "Fogo",  "corajoso e pioneiro"),
-        (5, 21, "Touro",       "Terra", "persistente e confiável"),
-        (6, 21, "Gêmeos",      "Ar",    "versátil e comunicativo"),
-        (7, 23, "Câncer",      "Água",  "protetor e empático"),
-        (8, 23, "Leão",        "Fogo",  "carismático e líder nato"),
-        (9, 23, "Virgem",      "Terra", "analítico e dedicado"),
-        (10,23, "Libra",       "Ar",    "equilibrado e diplomático"),
-        (11,22, "Escorpião",   "Água",  "intenso e estratégico"),
-        (12,22, "Sagitário",   "Fogo",  "aventureiro e otimista"),
-        (12,31, "Capricórnio", "Terra", "determinado e ambicioso"),
+        (1, 20, "Capricórnio", "Capricorn", "Terra", "Earth", "determinado e ambicioso", "determined and ambitious"),
+        (2, 19, "Aquário", "Aquarius", "Ar", "Air", "inovador e independente", "innovative and independent"),
+        (3, 20, "Peixes", "Pisces", "Água", "Water", "intuitivo e criativo", "intuitive and creative"),
+        (4, 20, "Áries", "Aries", "Fogo", "Fire", "corajoso e pioneiro", "brave and pioneering"),
+        (5, 21, "Touro", "Taurus", "Terra", "Earth", "persistente e confiável", "persistent and reliable"),
+        (6, 21, "Gêmeos", "Gemini", "Ar", "Air", "versátil e comunicativo", "versatile and communicative"),
+        (7, 23, "Câncer", "Cancer", "Água", "Water", "protetor e empático", "protective and empathetic"),
+        (8, 23, "Leão", "Leo", "Fogo", "Fire", "carismático e líder nato", "charismatic natural leader"),
+        (9, 23, "Virgem", "Virgo", "Terra", "Earth", "analítico e dedicado", "analytical and dedicated"),
+        (10, 23, "Libra", "Libra", "Ar", "Air", "equilibrado e diplomático", "balanced and diplomatic"),
+        (11, 22, "Escorpião", "Scorpio", "Água", "Water", "intenso e estratégico", "intense and strategic"),
+        (12, 22, "Sagitário", "Sagittarius", "Fogo", "Fire", "aventureiro e otimista", "adventurous and optimistic"),
+        (12, 31, "Capricórnio", "Capricorn", "Terra", "Earth", "determinado e ambicioso", "determined and ambitious"),
     ]
-    for mo, day, sign, element, trait in signs:
+    en = (lang or "pt").lower().startswith("en")
+    for mo, day, sign_pt, sign_en, el_pt, el_en, trait_pt, trait_en in signs:
         if m < mo or (m == mo and d <= day):
-            return {"sign": sign, "element": element, "trait": trait}
-    return {"sign": "Capricórnio", "element": "Terra", "trait": "determinado e ambicioso"}
+            return {
+                "sign": sign_en if en else sign_pt,
+                "element": el_en if en else el_pt,
+                "trait": trait_en if en else trait_pt,
+            }
+    return {"sign": "Capricorn" if en else "Capricórnio", "element": "Earth" if en else "Terra",
+            "trait": "determined and ambitious" if en else "determinado e ambicioso"}
 
 
 SYSTEM_ELIGIBILITY = """Você é um especialista em vistos americanos e imigração para os EUA.
@@ -231,6 +238,44 @@ Responda APENAS com JSON válido, sem markdown:
   "mensagem_sonho": "mensagem personalizada e inspiradora de 2-3 frases conectando o sonho dele com o visto e a cidade escolhida",
   "prompt_imagem": "in English, describe ONLY the visual story elements of this person's American dream to illustrate: their main goal/activity (work, investment or business), the chosen city and its famous landmarks, symbols of success and a few lifestyle details. Describe the scene and journey — do NOT specify any art style or rendering technique."
 }"""
+
+
+SYSTEM_ELIGIBILITY_EN = """You are an expert in US visas and immigration to the United States.
+Analyze the questionnaire answers and determine eligibility for a Green Card or US visas.
+Consider the main GOAL (travel, live/work, invest, or entrepreneurship) when recommending the visa.
+
+Visas to consider:
+- B-1/B-2: Tourism, business, or short visits
+- ESTA: Electronic authorization for VWP countries (short trips)
+- F-1/M-1: Study (if applicable)
+- EB-1A: Extraordinary ability
+- EB-1B: Outstanding researchers and professors
+- EB-2 NIW: National Interest Waiver
+- EB-2: Advanced degree professionals with job offer
+- EB-3: Skilled workers with job offer
+- EB-5: Investors ($800k–$1.05M)
+- E-2: Treaty investor
+- O-1: Extraordinary talent
+- L-1: Intracompany transfer
+- Family-based Green Card (IR/F)
+
+Respond ONLY with valid JSON, no markdown. All user-facing text fields must be in English:
+{
+  "elegivel": true/false,
+  "visto_principal": "most suitable visa name",
+  "visto_secundario": "alternative or null",
+  "probabilidade": "Alta / Média / Baixa",
+  "motivo_principal": "one-sentence reason in English",
+  "pontos_fortes": ["point 1", "point 2", "point 3"],
+  "pontos_atencao": ["point 1", "point 2"],
+  "mensagem_sonho": "personalized inspiring message in English, 2-3 sentences connecting their dream with the visa and chosen city",
+  "prompt_imagem": "in English, describe ONLY the visual story elements of this person's American dream to illustrate: their main goal/activity (work, investment or business), the chosen city and its famous landmarks, symbols of success and a few lifestyle details. Describe the scene and journey — do NOT specify any art style or rendering technique."
+}"""
+
+
+def normalize_idioma(data: dict) -> str:
+    idioma = (data.get("idioma") or "pt").strip().lower()
+    return "en" if idioma.startswith("en") else "pt"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -285,7 +330,10 @@ def save_lead(data: dict, result: dict) -> None:
         "sobrenome": data.get("sobrenome", ""),
         "email": data.get("email", ""),
         "whatsapp": data.get("whatsapp", ""),
+        "whatsapp_pais": data.get("whatsapp_pais", ""),
         "nascimento": data.get("nascimento", ""),
+        "pais_nascimento": data.get("pais_nascimento", ""),
+        "idioma": normalize_idioma(data),
         "interesse": data.get("interesse", ""),
         "area": data.get("area", ""),
         "formacao": data.get("formacao", ""),
@@ -362,6 +410,8 @@ def validate_lead_data(data: dict) -> None:
     """Validação server-side — não bloqueia fila offline no cliente, só na chegada ao servidor."""
     if not data.get("consentimento_lgpd"):
         raise HTTPException(400, "É necessário aceitar a política de privacidade.")
+    if not (data.get("pais_nascimento") or "").strip():
+        raise HTTPException(400, "País de nascimento é obrigatório.")
     email = (data.get("email") or "").strip()
     if not EMAIL_RE.match(email):
         raise HTTPException(400, "E-mail inválido.")
@@ -385,8 +435,9 @@ def csv_safe(value) -> str:
 def run_analysis(data: dict) -> dict:
     data = sanitize_payload(data)
     client = get_openai()
+    idioma = normalize_idioma(data)
 
-    zodiac = get_zodiac(data.get("nascimento", ""))
+    zodiac = get_zodiac(data.get("nascimento", ""), idioma)
     interesse = data.get("interesse", "")
     interesse_label = INTERESSE_LABEL.get(interesse, interesse or "Não informado")
 
@@ -395,6 +446,8 @@ Analise este perfil para elegibilidade de visto americano:
 
 Nome: {data.get('nome', '')}
 Data de nascimento: {data.get('nascimento', '')} (Signo: {zodiac['sign']}, Elemento: {zodiac['element']}, Traço: {zodiac['trait']})
+País de nascimento: {data.get('pais_nascimento', '')}
+Idioma da interface: {idioma}
 OBJETIVO PRINCIPAL: {interesse_label}
 
 {build_interest_section(data)}
@@ -402,11 +455,15 @@ Cidade dos sonhos nos EUA: {data.get('cidade', '')}
 Sonho / motivação: {data.get('sonho', '')}
 """
 
+    system_prompt = SYSTEM_ELIGIBILITY_EN if idioma == "en" else SYSTEM_ELIGIBILITY
+    if idioma == "en":
+        user_prompt = user_prompt.replace("Analise este perfil", "Analyze this profile", 1)
+
     response = client.chat.completions.create(
         model="gpt-4o",
         response_format={"type": "json_object"},
         messages=[
-            {"role": "system", "content": SYSTEM_ELIGIBILITY},
+            {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_prompt},
         ],
     )
@@ -443,7 +500,7 @@ MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 
 
 def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
-                       cidade: str = "", nascimento: str = "") -> str:
+                       cidade: str = "", nascimento: str = "", idioma: str = "pt") -> str:
     """Gera o mural a partir dos bytes da foto (em memória) e devolve o nome do arquivo."""
     client = get_openai()
     chosen_model = IMAGE_MODEL
@@ -464,12 +521,24 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
     )
 
     # Traços de personalidade (sempre positivos) a partir da data de nascimento (signo).
-    zodiac = get_zodiac(nascimento)
-    personality_clause = (
-        f"Sprinkle a couple of tiny uplifting personality doodles/labels in Portuguese "
-        f"reflecting that this person is '{zodiac['trait']}' — always positive and inspiring. "
-        if zodiac.get("trait") else ""
-    )
+    lang = "en" if (idioma or "").lower().startswith("en") else "pt"
+    zodiac = get_zodiac(nascimento, lang)
+    if lang == "en":
+        personality_clause = (
+            f"Sprinkle a couple of tiny uplifting personality doodles/labels in English "
+            f"reflecting that this person is '{zodiac['trait']}' — always positive and inspiring. "
+            if zodiac.get("trait") else ""
+        )
+        banner_phrase = "D4U, the company that can make my dream come true!"
+        labels_lang = "English"
+    else:
+        personality_clause = (
+            f"Sprinkle a couple of tiny uplifting personality doodles/labels in Portuguese "
+            f"reflecting that this person is '{zodiac['trait']}' — always positive and inspiring. "
+            if zodiac.get("trait") else ""
+        )
+        banner_phrase = "D4U, a empresa que pode realizar meu sonho!"
+        labels_lang = "Portuguese"
 
     # O logo entra como SEGUNDA imagem de referência: o modelo o redesenha no estilo do
     # mural (como a caricatura), mantendo as características — não é colado.
@@ -497,9 +566,8 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
         f"Illustrate their American dream as a lively story collage of small doodle scenes: {prompt}. "
         "Connect the little scenes with simple sketched arrows, add small icons, stars, "
         "hearts, the chosen city's famous landmarks drawn as doodles, and the US flag. "
-        f"Add a few short hand-written-style labels in Portuguese. {name_clause}{personality_clause}"
-        "Hand-letter a small ribbon/banner with the exact Portuguese phrase spelled "
-        "correctly: \"D4U, a empresa que pode realizar meu sonho!\". "
+        f"Add a few short hand-written-style labels in {labels_lang}. {name_clause}{personality_clause}"
+        f'Hand-letter a small ribbon/banner with the exact phrase spelled correctly: "{banner_phrase}". '
         f"{logo_clause}"
         "Vibrant marker colors, flat 2D hand-drawn illustration, optimistic and playful, "
         "white background, absolutely no photorealism."
@@ -611,10 +679,10 @@ def job_update(token: str, fields: dict) -> None:
 
 
 def _art_job(token: str, photo_bytes: bytes, prompt: str,
-             nome: str, cidade: str, nascimento: str) -> None:
+             nome: str, cidade: str, nascimento: str, idioma: str = "pt") -> None:
     """Roda em background: gera a arte, guarda no GridFS (se Mongo) e atualiza o job."""
     try:
-        filename = run_art_generation(photo_bytes, prompt, nome, cidade, nascimento)
+        filename = run_art_generation(photo_bytes, prompt, nome, cidade, nascimento, idioma)
         local_path = RESULTS_DIR / filename
 
         if MONGO_ENABLED:
@@ -695,6 +763,7 @@ async def submit(
         background_tasks.add_task(
             _art_job, token, photo_bytes, prompt_img,
             data.get("nome", ""), data.get("cidade", ""), data.get("nascimento", ""),
+            normalize_idioma(data),
         )
 
     return JSONResponse({"token": token})
