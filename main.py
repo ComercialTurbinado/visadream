@@ -111,7 +111,7 @@ CSV_COLUMNS = [
     "pais_nascimento", "idioma",
     "interesse", "area", "formacao", "experiencia", "familia",
     "motivo_viagem", "duracao_viagem", "historico_visto",
-    "negocio_tipo", "capital", "ja_empresa", "investimento", "tipo_investimento",
+    "negocio_tipo", "capital", "ja_empresa", "ja_empresa_pais", "investimento", "tipo_investimento",
     "cidade", "sonho", "visto_principal", "visto_secundario", "probabilidade",
     "elegivel", "motivo_principal", "mensagem_sonho", "pontos_fortes", "pontos_atencao",
     "consentimento_lgpd", "art_status", "art_url", "token",
@@ -313,6 +313,7 @@ def build_interest_section(data: dict) -> str:
             f"Tipo de negócio que quer tocar nos EUA: {data.get('negocio_tipo', '')}\n"
             f"Capital disponível para começar: {data.get('capital', '')}\n"
             f"Já tem empresa: {data.get('ja_empresa', '')}\n"
+            f"País da empresa: {data.get('ja_empresa_pais', '')}\n"
         )
     if interesse == "investir":
         return (
@@ -345,6 +346,7 @@ def save_lead(data: dict, result: dict) -> None:
         "negocio_tipo": data.get("negocio_tipo", ""),
         "capital": data.get("capital", ""),
         "ja_empresa": data.get("ja_empresa", ""),
+        "ja_empresa_pais": data.get("ja_empresa_pais", ""),
         "investimento": data.get("investimento", ""),
         "tipo_investimento": data.get("tipo_investimento", ""),
         "cidade": data.get("cidade", ""),

@@ -377,8 +377,12 @@
         <div>
           <label class="text-sm text-gray-300 mb-3 block" data-label="ja_empresa">Você já tem empresa hoje?</label>
           <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Já tem empresa">
-            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="ja_empresa" data-value="Sim, já tenho empresa no Brasil" onclick="selectOption(this)">Sim, no Brasil</button>
+            <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="ja_empresa" data-value="Sim" onclick="selectOption(this)">Sim</button>
             <button type="button" class="option-btn rounded-xl p-2 text-sm" data-group="ja_empresa" data-value="Não, vou começar do zero" onclick="selectOption(this)">Não, do zero</button>
+          </div>
+          <div id="ja_empresa-pais-wrap" class="hidden mt-3">
+            <label for="ja_empresa-pais" class="text-sm text-gray-300 mb-2 block" data-i18n="ja_empresa_pais">Em qual país está a empresa?</label>
+            <select id="ja_empresa-pais" class="w-full rounded-xl px-4 py-3 text-base"></select>
           </div>
         </div>
       </div>
@@ -650,7 +654,7 @@ const form = {
   interesse: '',
   area: '', area_outro: '', formacao: '', formacao_outro: '', experiencia: '', familia: '',
   motivo_viagem: '', duracao_viagem: '', historico_visto: '',
-  negocio_tipo: '', capital: '', ja_empresa: '',
+  negocio_tipo: '', capital: '', ja_empresa: '', ja_empresa_pais: '',
   investimento: '', tipo_investimento: '',
   cidade: '', cidade_outro: '', sonho: '', sonho_outro: '',
   nome: '', sobrenome: '', email: '', whatsapp: '', whatsapp_pais: 'BR', nascimento: '',
@@ -682,8 +686,10 @@ function initLocaleAndPhone() {
   const countrySel = document.getElementById('f-phone-country');
   const phoneInp = document.getElementById('f-whatsapp');
   const birthSel = document.getElementById('f-pais-nascimento');
+  const companyCountrySel = document.getElementById('ja_empresa-pais');
   VisaDreamPhone.populatePhoneSelect(countrySel, form.idioma);
   VisaDreamPhone.populateBirthSelect(birthSel, form.idioma);
+  if (companyCountrySel) VisaDreamPhone.populateBirthSelect(companyCountrySel, form.idioma);
   countrySel.value = form.whatsapp_pais;
   birthSel.value = form.pais_nascimento;
 
@@ -692,6 +698,9 @@ function initLocaleAndPhone() {
     phoneInp.value = VisaDreamPhone.formatPhoneInput(phoneInp.value, countrySel.value);
   });
   birthSel.addEventListener('change', () => { form.pais_nascimento = birthSel.value; });
+  if (companyCountrySel) {
+    companyCountrySel.addEventListener('change', () => { form.ja_empresa_pais = companyCountrySel.value; });
+  }
   phoneInp.addEventListener('input', () => {
     phoneInp.value = VisaDreamPhone.formatPhoneInput(phoneInp.value, countrySel.value);
   });
@@ -758,6 +767,21 @@ function selectOption(btn) {
       form[group + '_outro'] = '';
       const inp = outroWrap.querySelector('input');
       if (inp) inp.value = '';
+    }
+  }
+
+  if (group === 'ja_empresa') {
+    const paisWrap = document.getElementById('ja_empresa-pais-wrap');
+    const paisSel = document.getElementById('ja_empresa-pais');
+    if (paisWrap) {
+      if (btn.dataset.value === 'Sim') {
+        paisWrap.classList.remove('hidden');
+        if (paisSel) form.ja_empresa_pais = paisSel.value;
+      } else {
+        paisWrap.classList.add('hidden');
+        form.ja_empresa_pais = '';
+        if (paisSel) paisSel.value = 'BR';
+      }
     }
   }
 }
@@ -854,6 +878,10 @@ function nextFrom2() {
     const txt = (document.getElementById('formacao-outro')?.value || '').trim();
     if (!txt) return showErr('err-2', VisaDreamI18n.t('err.formacaoOther'));
     form.formacao_outro = txt;
+  }
+  if (form.ja_empresa === 'Sim') {
+    form.ja_empresa_pais = document.getElementById('ja_empresa-pais')?.value || '';
+    if (!form.ja_empresa_pais) return showErr('err-2', VisaDreamI18n.t('err.companyCountry'), document.getElementById('ja_empresa-pais'));
   }
   goStep(3);
 }

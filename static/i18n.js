@@ -62,6 +62,7 @@ window.VisaDreamI18n = (function () {
     'err.fillFields': { pt: 'Responda todas as perguntas desta etapa.', en: 'Answer all questions in this step.' },
     'err.areaOther': { pt: 'Conte sua área em "Outro".', en: 'Tell us your field under "Other".' },
     'err.formacaoOther': { pt: 'Conte sua formação em "Outro".', en: 'Tell us your education under "Other".' },
+    'err.companyCountry': { pt: 'Selecione o país da empresa.', en: 'Select the country of the company.' },
     'err.cityPick': { pt: 'Escolha a cidade dos seus sonhos.', en: 'Choose your dream city.' },
     'err.cityOther': { pt: 'Informe a cidade em "Outro".', en: 'Enter the city under "Other".' },
     'err.dreamOther': { pt: 'Conte seu sonho em "Outro".', en: 'Tell us your dream under "Other".' },
@@ -107,6 +108,7 @@ window.VisaDreamI18n = (function () {
     negocio_tipo: { pt: 'Que tipo de negócio você quer tocar nos EUA?', en: 'What type of business do you want to run in the USA?' },
     capital: { pt: 'Capital disponível para começar', en: 'Available capital to start' },
     ja_empresa: { pt: 'Você já tem empresa hoje?', en: 'Do you already have a company?' },
+    ja_empresa_pais: { pt: 'Em qual país está a empresa?', en: 'In which country is the company?' },
   };
 
   const OPTION_LABELS = {
@@ -151,7 +153,7 @@ window.VisaDreamI18n = (function () {
     'Serviços': { pt: '🛠️ Serviços', en: '🛠️ Services' },
     'Restaurante / Food': { pt: '🍔 Food', en: '🍔 Food' },
     'Franquia': { pt: '🏬 Franquia', en: '🏬 Franchise' },
-    'Sim, já tenho empresa no Brasil': { pt: 'Sim, no Brasil', en: 'Yes, in Brazil' },
+    'Sim': { pt: 'Sim', en: 'Yes' },
     'Não, vou começar do zero': { pt: 'Não, do zero', en: 'No, from scratch' },
     'New York': { pt: '🗽 New York', en: '🗽 New York' },
     'Miami': { pt: '🌴 Miami', en: '🌴 Miami' },
@@ -230,6 +232,8 @@ window.VisaDreamI18n = (function () {
         el.innerHTML = (LABELS[group][lang] || LABELS[group].pt) + star;
       });
     });
+    const companyCountryLabel = document.querySelector('label[data-i18n="ja_empresa_pais"]');
+    if (companyCountryLabel) companyCountryLabel.textContent = t('ja_empresa_pais');
 
     document.querySelectorAll('.option-btn[data-value]').forEach(btn => {
       const lbl = OPTION_LABELS[btn.dataset.value];
@@ -258,6 +262,7 @@ window.VisaDreamI18n = (function () {
     if (window.VisaDreamPhone) {
       VisaDreamPhone.populatePhoneSelect(document.getElementById('f-phone-country'), lang);
       VisaDreamPhone.populateBirthSelect(document.getElementById('f-pais-nascimento'), lang);
+      VisaDreamPhone.populateBirthSelect(document.getElementById('ja_empresa-pais'), lang);
     }
   }
 
