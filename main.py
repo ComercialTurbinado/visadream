@@ -6,7 +6,8 @@ import json
 import base64
 import secrets
 import re
-from datetime import date, datetime
+import threading
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional, Any
 
@@ -92,6 +93,9 @@ LEADS_FILE = Path("leads.json")
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-2")
 # Qualidade: "medium" (mais rápido/barato) ou "high" (mais detalhado/lento).
 IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "medium")
+
+# Geração de imagem pode levar vários minutos — retentar se ficar preso.
+STALE_GENERATION = timedelta(minutes=10)
 
 # Logo real sobreposto na arte (mantém o logo 100% fiel, sem o modelo redesenhá-lo).
 # Usa a versão azul-marinho, que fica legível sobre o badge branco.
@@ -812,7 +816,7 @@ def _needs_art_without_photo(job: dict) -> bool:
         return False
     if job.get("has_photo") is True:
         return False
-    if job.get("status") in ("generating", "processing"):
+    if job.get("status") == "failed":
         return False
     if job.get("has_photo") is False:
         return True
@@ -820,8 +824,29 @@ def _needs_art_without_photo(job: dict) -> bool:
     return job.get("status") == "done" and not job.get("art_file_id")
 
 
+def _generation_is_stale(job: dict) -> bool:
+    """Job preso em processing/generating sem arte há tempo demais."""
+    if not job or job.get("status") not in ("processing", "generating"):
+        return False
+    started = job.get("generation_started_at")
+    if isinstance(started, datetime):
+        return datetime.now() - started > STALE_GENERATION
+    return True
+
+
 def _try_claim_art_generation(token: str) -> bool:
     """Reserva a geração para um único worker (evita chamadas duplicadas à OpenAI)."""
+    job = job_get(token)
+    if not job or _job_has_art(job):
+        return False
+    if job.get("status") == "generating" and not _generation_is_stale(job):
+        return False
+    if job.get("status") == "processing":
+        started = job.get("generation_started_at")
+        if isinstance(started, datetime) and datetime.now() - started <= STALE_GENERATION:
+            return False
+
+    now = datetime.now()
     if MONGO_ENABLED:
         try:
             db, _ = get_mongo()
@@ -833,19 +858,43 @@ def _try_claim_art_generation(token: str) -> bool:
                         {"art_file_id": None},
                         {"art_file_id": ""},
                     ],
-                    "status": {"$ne": "generating"},
                 },
-                {"$set": {"status": "generating"}},
+                {"$set": {"status": "generating", "generation_started_at": now}},
             )
             return result.modified_count > 0
         except Exception as e:
             print(f"[art-job] claim falhou: {e}")
             return False
     job = JOBS.get(token)
-    if not job or _job_has_art(job) or job.get("status") == "generating":
+    if not job or _job_has_art(job):
+        return False
+    if job.get("status") == "generating" and not _generation_is_stale(job):
         return False
     job["status"] = "generating"
+    job["generation_started_at"] = now
     return True
+
+
+def _spawn_art_job(token: str, photo_bytes: Optional[bytes], prompt: str,
+                   nome: str, cidade: str, nascimento: str, idioma: str = "pt") -> None:
+    """Thread dedicada — BackgroundTasks do FastAPI pode morrer em tarefas longas."""
+    threading.Thread(
+        target=_art_job,
+        args=(token, photo_bytes, prompt, nome, cidade, nascimento, idioma),
+        daemon=True,
+        name=f"art-{token[:8]}",
+    ).start()
+
+
+def _enqueue_art_generation(token: str, photo_bytes: Optional[bytes], prompt: str,
+                            nome: str, cidade: str, nascimento: str,
+                            idioma: str = "pt") -> None:
+    if _job_has_art(job_get(token)):
+        return
+    if not _try_claim_art_generation(token):
+        return
+    print(f"[art-job] enfileirando geração para {token[:8]}… (foto={bool(photo_bytes)})")
+    _spawn_art_job(token, photo_bytes, prompt, nome, cidade, nascimento, idioma)
 
 
 def _discard_generated_file(filename: str) -> None:
@@ -906,31 +955,31 @@ def _save_art_to_job(token: str, filename: str) -> None:
 
 def _art_job(token: str, photo_bytes: Optional[bytes], prompt: str,
              nome: str, cidade: str, nascimento: str, idioma: str = "pt") -> None:
-    """Roda em background: gera a arte, guarda no GridFS (se Mongo) e atualiza o job."""
+    """Roda em thread: gera a arte, guarda no GridFS (se Mongo) e atualiza o job."""
     job = job_get(token)
     if _job_has_art(job):
         print(f"[art-job] arte já existe para {token[:8]}…, geração ignorada")
         return
     try:
+        print(f"[art-job] OpenAI iniciada para {token[:8]}…")
         filename = run_art_generation(photo_bytes, prompt, nome, cidade, nascimento, idioma)
+        print(f"[art-job] OpenAI concluída para {token[:8]}… → {filename}")
         _save_art_to_job(token, filename)
     except Exception as e:
-        print(f"[art-job] falha ao gerar arte: {e}")
+        print(f"[art-job] falha ao gerar arte ({token[:8]}…): {e}")
         job = job_get(token)
         if not _job_has_art(job):
             job_update(token, {"status": "failed"})
 
 
-def _maybe_start_art_generation(token: str, job: dict, background_tasks: BackgroundTasks) -> None:
-    """Dispara geração em background quando a arte ainda não existe (sem foto)."""
+def _maybe_start_art_generation(token: str, job: dict) -> None:
+    """Dispara geração em thread quando a arte ainda não existe (sem foto)."""
     if _job_has_art(job):
         return
     if not _needs_art_without_photo(job):
         return
-    if not _try_claim_art_generation(token):
-        return
     prompt, nome, cidade, nascimento, idioma = _resolve_art_params(job, token)
-    background_tasks.add_task(_art_job, token, None, prompt, nome, cidade, nascimento, idioma)
+    _enqueue_art_generation(token, None, prompt, nome, cidade, nascimento, idioma)
 
 
 @app.get("/api/config")
@@ -991,19 +1040,12 @@ async def submit(
     save_lead({**data, "token": token}, result)
     background_tasks.add_task(hubspot_upsert, data, token)
 
-    # Geração da arte em background (não trava a resposta).
-    if photo_bytes:
-        background_tasks.add_task(
-            _art_job, token, photo_bytes, prompt_img,
-            data.get("nome", ""), data.get("cidade", ""), data.get("nascimento", ""),
-            normalize_idioma(data),
-        )
-    else:
-        background_tasks.add_task(
-            _art_job, token, None, prompt_img,
-            data.get("nome", ""), data.get("cidade", ""), data.get("nascimento", ""),
-            normalize_idioma(data),
-        )
+    # Geração da arte em thread dedicada (não trava a resposta).
+    _enqueue_art_generation(
+        token, photo_bytes, prompt_img,
+        data.get("nome", ""), data.get("cidade", ""), data.get("nascimento", ""),
+        normalize_idioma(data),
+    )
 
     return JSONResponse({"token": token})
 
@@ -1059,7 +1101,7 @@ async def art_status(token: str, background_tasks: BackgroundTasks):
     if not job:
         raise HTTPException(404, "Link inválido ou expirado.")
 
-    _maybe_start_art_generation(token, job, background_tasks)
+    _maybe_start_art_generation(token, job)
     job = job_get(token) or job
 
     status = job.get("status", "")
@@ -1098,7 +1140,7 @@ async def art_image(token: str, request: Request, background_tasks: BackgroundTa
 
     # Link aberto no navegador → mesma tela pós-cadastro com mosaic e infos do cliente.
     if _wants_html_page(request):
-        _maybe_start_art_generation(token, job, background_tasks)
+        _maybe_start_art_generation(token, job)
         return RedirectResponse(url=_arte_page_url(token), status_code=302)
 
     if job.get("has_photo") is False and job.get("status") in ("processing", "generating"):
@@ -1109,7 +1151,7 @@ async def art_image(token: str, request: Request, background_tasks: BackgroundTa
         )
     if not _needs_art_without_photo(job):
         raise HTTPException(404, "Arte não encontrada.")
-    _maybe_start_art_generation(token, job, background_tasks)
+    _maybe_start_art_generation(token, job)
     raise HTTPException(
         503,
         "Arte em geração. Tente novamente em instantes.",
