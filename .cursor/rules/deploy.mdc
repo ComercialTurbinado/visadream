@@ -1,0 +1,22 @@
+---
+description: Deploy no Easypanel após push neste projeto (VisaDream)
+alwaysApply: true
+---
+
+# Deploy — VisaDream
+
+O Easypanel **não** faz deploy automático via git push. Após `git push` com sucesso (e build/validação ok), **sempre** acionar o redeploy:
+
+```bash
+./scripts/deploy.sh
+```
+
+Ou:
+
+```bash
+curl -X POST "http://3.210.217.206:3000/api/deploy/6b32fc53ef703684f8b11416463a3bccd922af5c82959ea3"
+```
+
+Resposta esperada: `Deploying...` com HTTP 200.
+
+Produção: https://d4u-visadream.dtna1d.easypanel.host

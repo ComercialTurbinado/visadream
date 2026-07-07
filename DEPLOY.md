@@ -2,6 +2,25 @@
 
 App: FastAPI (Python) + HTML estático. Geração de imagem leva ~40s (medium).
 
+## Produção (Easypanel)
+
+- **URL:** https://d4u-visadream.dtna1d.easypanel.host
+- **Git:** push em `main` **não** dispara deploy sozinho — acionar o webhook depois do push.
+
+### Redeploy
+
+```bash
+./scripts/deploy.sh
+```
+
+Webhook (POST):
+
+```
+http://3.210.217.206:3000/api/deploy/6b32fc53ef703684f8b11416463a3bccd922af5c82959ea3
+```
+
+Resposta esperada: `Deploying...` (HTTP 200).
+
 ## Arquitetura recomendada
 - **Backend (este app):** AWS **Lightsail Container** (always-on, sem cold start, barato)
 - **Banco (leads + jobs):** **MongoDB Atlas**
