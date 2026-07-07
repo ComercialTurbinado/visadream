@@ -204,17 +204,24 @@ function renderAnalysis(d) {
 
 let revealed = false;
 function revealArt(url) {
-  if (revealed) return; revealed = true;
-  stopMosaic();
-  const img = document.getElementById('art-final');
-  img.onload = () => {
-    img.classList.add('show');
-    document.getElementById('gen-overlay').style.display = 'none';
-    const dl = document.getElementById('download-btn');
-    dl.href = url;
-    document.getElementById('art-done').classList.remove('hidden');
-  };
-  img.src = url;
+  return new Promise((resolve) => {
+    if (revealed) { resolve(true); return; }
+    const img = document.getElementById('art-final');
+    img.onload = () => {
+      if (revealed) { resolve(true); return; }
+      revealed = true;
+      stopMosaic();
+      img.classList.add('show');
+      document.getElementById('gen-overlay').style.display = 'none';
+      const dl = document.getElementById('download-btn');
+      dl.href = url;
+      document.getElementById('art-done').classList.remove('hidden');
+      resolve(true);
+    };
+    img.onerror = () => resolve(false);
+    const sep = url.includes('?') ? '&' : '?';
+    img.src = url + sep + '_t=' + Date.now();
+  });
 }
 
 function showNoArt() {
@@ -243,9 +250,14 @@ async function poll() {
       if (d.status === 'processing') startMosaic();
     }
 
-    if (d.status === 'done') {
-      if (d.art_url) revealArt(d.art_url); else showNoArt();
-      return;
+    if (d.status === 'done' || d.status === 'processing') {
+      if (d.art_url) {
+        const ok = await revealArt(d.art_url);
+        if (ok || d.status === 'done') return;
+      } else if (d.status === 'done') {
+        showNoArt();
+        return;
+      }
     }
     if (d.status === 'failed') { showFailed(); return; }
 

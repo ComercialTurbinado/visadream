@@ -501,9 +501,29 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 
 
-def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
+def get_lead_by_token(token: str) -> Optional[dict]:
+    """Busca lead pelo token (MongoDB ou leads.json local)."""
+    if MONGO_ENABLED:
+        try:
+            db, _ = get_mongo()
+            return db.leads.find_one({"token": token})
+        except Exception as e:
+            print(f"[leads] get by token falhou: {e}")
+    if LEADS_FILE.exists():
+        try:
+            leads = json.loads(LEADS_FILE.read_text(encoding="utf-8"))
+            if isinstance(leads, list):
+                for lead in leads:
+                    if lead.get("token") == token:
+                        return lead
+        except Exception:
+            pass
+    return None
+
+
+def run_art_generation(photo_bytes: Optional[bytes], prompt: str, nome: str = "",
                        cidade: str = "", nascimento: str = "", idioma: str = "pt") -> str:
-    """Gera o mural a partir dos bytes da foto (em memória) e devolve o nome do arquivo."""
+    """Gera o mural e devolve o nome do arquivo. Com foto: caricatura; sem foto: só o sonho."""
     client = get_openai()
     chosen_model = IMAGE_MODEL
 
@@ -519,6 +539,9 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
     name_clause = (
         f"The only readable text that is a person's name must be '{first_name}', "
         "hand-lettered once as the protagonist's label — do not invent any other name. "
+        if first_name and photo_bytes else
+        f"Hand-letter the name '{first_name}' once as a decorative label in the mural — "
+        "do not invent any other name. "
         if first_name else ""
     )
 
@@ -542,8 +565,7 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
         banner_phrase = "D4U, a empresa que pode realizar meu sonho!"
         labels_lang = "Portuguese"
 
-    # O logo entra como SEGUNDA imagem de referência: o modelo o redesenha no estilo do
-    # mural (como a caricatura), mantendo as características — não é colado.
+    # O logo entra como imagem de referência quando disponível; senão, só no texto do prompt.
     logo_clause = (
         "The SECOND provided image is the D4U company logo (the letters D and U in dark "
         "navy blue with a golden number 4 between them, and the word IMMIGRATION below). "
@@ -553,21 +575,19 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
         "in a corner — integrated into the art, not pasted. "
         if logo_bytes else ""
     )
+    logo_text_clause = (
+        "Include the D4U company logo (the letters D and U in dark navy blue with a golden "
+        "number 4 between them, and the word IMMIGRATION below) drawn by hand as a doodle in "
+        "the SAME colored-marker style, on a little hand-drawn sign or banner in a corner. "
+        if logo_bytes else ""
+    )
 
-    full_prompt = (
-        "Create a colorful hand-drawn 'Draw My Life' style mural in a TALL VERTICAL 9:16 "
-        "portrait composition: a cheerful doodle collage as if sketched with colored markers "
-        "on a clean white background, filling the whole vertical frame. "
-        "Use the FIRST provided image (a real person) as reference to draw a friendly cartoon "
-        "CARICATURE of them as the smiling protagonist — keep their hairstyle, hair color, "
-        "skin tone and general features recognizable, but illustrated as a cute, tidy "
-        "hand-drawn character (not photorealistic). "
-        "ONLY the protagonist is drawn as a character with a face. Do NOT draw any other "
-        "people or faces — represent family, home and loved ones symbolically instead "
-        "(a little house, hearts, a family icon), never as drawn faces. "
+    story_clause = (
         f"Illustrate their American dream as a lively story collage of small doodle scenes: {prompt}. "
         "Connect the little scenes with simple sketched arrows, add small icons, stars, "
         "hearts, the chosen city's famous landmarks drawn as doodles, and the US flag. "
+    )
+    style_tail = (
         f"Add a few short hand-written-style labels in {labels_lang}. {name_clause}{personality_clause}"
         f'Hand-letter a small ribbon/banner with the exact phrase spelled correctly: "{banner_phrase}". '
         f"{logo_clause}"
@@ -575,9 +595,58 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
         "white background, absolutely no photorealism."
     )
 
+    if photo_bytes:
+        protagonist_clause = (
+            "Use the FIRST provided image (a real person) as reference to draw a friendly cartoon "
+            "CARICATURE of them as the smiling protagonist — keep their hairstyle, hair color, "
+            "skin tone and general features recognizable, but illustrated as a cute, tidy "
+            "hand-drawn character (not photorealistic). "
+            "ONLY the protagonist is drawn as a character with a face. Do NOT draw any other "
+            "people or faces — represent family, home and loved ones symbolically instead "
+            "(a little house, hearts, a family icon), never as drawn faces. "
+        )
+        logo_ref_clause = (
+            "The SECOND provided image is the D4U company logo (the letters D and U in dark "
+            "navy blue with a golden number 4 between them, and the word IMMIGRATION below). "
+            "Redraw THIS logo by hand as a doodle in the SAME colored-marker style as the rest "
+            "of the mural, keeping its characteristics clearly recognizable (navy D-4-U with the "
+            "gold 4 and the IMMIGRATION wordmark), placed on a little hand-drawn sign or banner "
+            "in a corner — integrated into the art, not pasted. "
+            if logo_bytes else ""
+        )
+        full_prompt = (
+            "Create a colorful hand-drawn 'Draw My Life' style mural in a TALL VERTICAL 9:16 "
+            "portrait composition: a cheerful doodle collage as if sketched with colored markers "
+            "on a clean white background, filling the whole vertical frame. "
+            f"{protagonist_clause}{story_clause}{style_tail.replace(logo_clause, logo_ref_clause)}"
+        )
+    else:
+        no_face_clause = (
+            "Do NOT draw any human faces, people, bodies or caricatures anywhere in the mural — "
+            "illustrate the journey purely with symbolic doodles (icons, landmarks, arrows, stars, "
+            "hearts, houses, flags, career symbols). "
+        )
+        full_prompt = (
+            "Create a colorful hand-drawn 'Draw My Life' style mural in a TALL VERTICAL 9:16 "
+            "portrait composition: a cheerful doodle collage as if sketched with colored markers "
+            "on a clean white background, filling the whole vertical frame. "
+            f"{no_face_clause}{story_clause}"
+            f"Add a few short hand-written-style labels in {labels_lang}. {name_clause}{personality_clause}"
+            f'Hand-letter a small ribbon/banner with the exact phrase spelled correctly: "{banner_phrase}". '
+            f"{logo_text_clause}"
+            "Vibrant marker colors, flat 2D hand-drawn illustration, optimistic and playful, "
+            "white background, absolutely no photorealism."
+        )
+
     def make_image_input():
         # 1ª imagem = rosto (caricatura); 2ª = logo D4U (redesenhado no estilo).
         # Recria a cada tentativa pois o stream é consumido.
+        if not photo_bytes:
+            if logo_bytes:
+                logo = io.BytesIO(logo_bytes)
+                logo.name = "d4u-logo.png"
+                return logo
+            return None
         person = io.BytesIO(photo_bytes)
         person.name = "face.png"
         if logo_bytes:
@@ -587,8 +656,7 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
         return person
 
     # gpt-image-2 já processa a entrada em alta fidelidade (não aceita input_fidelity);
-    # modelos gpt-image-1.x aceitam o parâmetro. Em todos os casos tentamos EDITAR (usa o
-    # rosto pra caricatura); só geramos sem foto como último recurso.
+    # modelos gpt-image-1.x aceitam o parâmetro. Com foto tentamos EDITAR; sem foto, generate.
     q = IMAGE_QUALITY
     if chosen_model.startswith("gpt-image-2"):
         param_variants = [{"quality": q}, {}]
@@ -599,27 +667,46 @@ def run_art_generation(photo_bytes: bytes, prompt: str, nome: str = "",
     IMG_SIZE = "1024x1536"
 
     response = None
-    for extra in param_variants:
-        try:
-            response = client.images.edit(
-                model=chosen_model,
-                image=make_image_input(),
-                prompt=full_prompt,
-                size=IMG_SIZE,
-                **extra,
-            )
-            break
-        except Exception as e:
-            print(f"[generate-image] edit falhou com {list(extra)}: {e}")
+    if photo_bytes:
+        for extra in param_variants:
+            try:
+                response = client.images.edit(
+                    model=chosen_model,
+                    image=make_image_input(),
+                    prompt=full_prompt,
+                    size=IMG_SIZE,
+                    **extra,
+                )
+                break
+            except Exception as e:
+                print(f"[generate-image] edit falhou com {list(extra)}: {e}")
 
     if response is None:
-        print("[generate-image] usando fallback sem foto")
-        response = client.images.generate(
-            model=chosen_model,
-            prompt=full_prompt,
-            size=IMG_SIZE,
-            quality=IMAGE_QUALITY,
-        )
+        if photo_bytes:
+            print("[generate-image] usando fallback generate (com foto)")
+        else:
+            print("[generate-image] gerando mural sem foto")
+        edit_input = make_image_input()
+        if edit_input and not photo_bytes:
+            for extra in param_variants:
+                try:
+                    response = client.images.edit(
+                        model=chosen_model,
+                        image=edit_input,
+                        prompt=full_prompt,
+                        size=IMG_SIZE,
+                        **extra,
+                    )
+                    break
+                except Exception as e:
+                    print(f"[generate-image] edit logo falhou com {list(extra)}: {e}")
+        if response is None:
+            response = client.images.generate(
+                model=chosen_model,
+                prompt=full_prompt,
+                size=IMG_SIZE,
+                quality=IMAGE_QUALITY,
+            )
 
     img_data = response.data[0]
 
@@ -680,32 +767,170 @@ def job_update(token: str, fields: dict) -> None:
         JOBS[token].update(fields)
 
 
-def _art_job(token: str, photo_bytes: bytes, prompt: str,
-             nome: str, cidade: str, nascimento: str, idioma: str = "pt") -> None:
-    """Roda em background: gera a arte, guarda no GridFS (se Mongo) e atualiza o job."""
-    try:
-        filename = run_art_generation(photo_bytes, prompt, nome, cidade, nascimento, idioma)
-        local_path = RESULTS_DIR / filename
+def _job_has_art(job: Optional[dict]) -> bool:
+    """True se o job já tem arte persistida — nunca regenerar nesses casos."""
+    if not job:
+        return False
+    if job.get("art_file_id"):
+        return True
+    art_url = (job.get("art_url") or "").strip()
+    if art_url.startswith("/static/results/"):
+        name = art_url.rsplit("/", 1)[-1]
+        if name and (RESULTS_DIR / name).exists():
+            return True
+    return False
 
-        if MONGO_ENABLED:
-            try:
-                _, fs = get_mongo()
-                with open(local_path, "rb") as f:
-                    file_id = fs.put(f.read(), filename=filename, contentType="image/png", token=token)
-                job_update(token, {"status": "done", "art_file_id": str(file_id),
-                                   "art_url": f"/api/art-image?token={token}"})
+
+def _resolve_art_params(job: dict, token: str) -> tuple[str, str, str, str, str]:
+    """Monta prompt e metadados para geração (job + lead legado)."""
+    prompt = (job.get("prompt_imagem") or "").strip()
+    nome = job.get("nome", "")
+    cidade = job.get("cidade", "")
+    nascimento = job.get("nascimento", "")
+    idioma = job.get("idioma", "pt")
+
+    if not prompt or not cidade or not nascimento:
+        lead = get_lead_by_token(token)
+        if lead:
+            nome = nome or lead.get("nome", "")
+            cidade = cidade or lead.get("cidade", "")
+            nascimento = nascimento or lead.get("nascimento", "")
+            idioma = idioma or lead.get("idioma", "pt")
+            if not prompt:
+                sonho = (lead.get("sonho") or "").strip()
+                prompt = f"Dream life in {cidade}: {sonho}" if cidade else sonho
+
+    if not prompt:
+        prompt = f"Dream life in {cidade}" if cidade else "American dream journey"
+
+    return prompt, nome, cidade, nascimento, idioma
+
+
+def _needs_art_without_photo(job: dict) -> bool:
+    """Cadastro sem foto (ou legado) que ainda não tem arte no GridFS."""
+    if _job_has_art(job):
+        return False
+    if job.get("has_photo") is True:
+        return False
+    if job.get("status") in ("generating", "processing"):
+        return False
+    if job.get("has_photo") is False:
+        return True
+    # Legado: sem foto marcava status "done" sem arte.
+    return job.get("status") == "done" and not job.get("art_file_id")
+
+
+def _try_claim_art_generation(token: str) -> bool:
+    """Reserva a geração para um único worker (evita chamadas duplicadas à OpenAI)."""
+    if MONGO_ENABLED:
+        try:
+            db, _ = get_mongo()
+            result = db.art_jobs.update_one(
+                {
+                    "_id": token,
+                    "$or": [
+                        {"art_file_id": {"$exists": False}},
+                        {"art_file_id": None},
+                        {"art_file_id": ""},
+                    ],
+                    "status": {"$ne": "generating"},
+                },
+                {"$set": {"status": "generating"}},
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            print(f"[art-job] claim falhou: {e}")
+            return False
+    job = JOBS.get(token)
+    if not job or _job_has_art(job) or job.get("status") == "generating":
+        return False
+    job["status"] = "generating"
+    return True
+
+
+def _discard_generated_file(filename: str) -> None:
+    try:
+        (RESULTS_DIR / filename).unlink()
+    except Exception:
+        pass
+
+
+def _save_art_to_job(token: str, filename: str) -> None:
+    """Persiste a arte gerada e atualiza o job — só se ainda não existir arte."""
+    job = job_get(token)
+    if _job_has_art(job):
+        print(f"[art-job] arte já existia para {token[:8]}…, descartando nova geração")
+        _discard_generated_file(filename)
+        return
+
+    local_path = RESULTS_DIR / filename
+    art_url = f"/api/art-image?token={token}"
+
+    if MONGO_ENABLED:
+        try:
+            db, fs = get_mongo()
+            with open(local_path, "rb") as f:
+                file_id = fs.put(f.read(), filename=filename, contentType="image/png", token=token)
+            result = db.art_jobs.update_one(
+                {
+                    "_id": token,
+                    "$or": [
+                        {"art_file_id": {"$exists": False}},
+                        {"art_file_id": None},
+                        {"art_file_id": ""},
+                    ],
+                },
+                {"$set": {"status": "done", "art_file_id": str(file_id), "art_url": art_url}},
+            )
+            if result.modified_count == 0:
+                print(f"[art-job] outra requisição salvou antes — descartando duplicata")
                 try:
-                    local_path.unlink()  # não guarda PII localmente
+                    fs.delete(file_id)
                 except Exception:
                     pass
+                _discard_generated_file(filename)
                 return
-            except Exception as e:
-                print(f"[art-job] gridfs falhou, mantendo local: {e}")
+            try:
+                local_path.unlink()
+            except Exception:
+                pass
+            return
+        except Exception as e:
+            print(f"[art-job] gridfs falhou, mantendo local: {e}")
 
-        job_update(token, {"status": "done", "art_url": f"/static/results/{filename}"})
+    if _job_has_art(job_get(token)):
+        _discard_generated_file(filename)
+        return
+    job_update(token, {"status": "done", "art_url": f"/static/results/{filename}"})
+
+
+def _art_job(token: str, photo_bytes: Optional[bytes], prompt: str,
+             nome: str, cidade: str, nascimento: str, idioma: str = "pt") -> None:
+    """Roda em background: gera a arte, guarda no GridFS (se Mongo) e atualiza o job."""
+    job = job_get(token)
+    if _job_has_art(job):
+        print(f"[art-job] arte já existe para {token[:8]}…, geração ignorada")
+        return
+    try:
+        filename = run_art_generation(photo_bytes, prompt, nome, cidade, nascimento, idioma)
+        _save_art_to_job(token, filename)
     except Exception as e:
         print(f"[art-job] falha ao gerar arte: {e}")
-        job_update(token, {"status": "failed"})
+        job = job_get(token)
+        if not _job_has_art(job):
+            job_update(token, {"status": "failed"})
+
+
+def _maybe_start_art_generation(token: str, job: dict, background_tasks: BackgroundTasks) -> None:
+    """Dispara geração em background quando a arte ainda não existe (sem foto)."""
+    if _job_has_art(job):
+        return
+    if not _needs_art_without_photo(job):
+        return
+    if not _try_claim_art_generation(token):
+        return
+    prompt, nome, cidade, nascimento, idioma = _resolve_art_params(job, token)
+    background_tasks.add_task(_art_job, token, None, prompt, nome, cidade, nascimento, idioma)
 
 
 @app.get("/api/config")
@@ -749,22 +974,33 @@ async def submit(
     result = run_analysis(data)
 
     token = secrets.token_urlsafe(24)
+    prompt_img = result.get("prompt_imagem") or \
+        f"Dream life in {data.get('cidade', '')}: {data.get('sonho', '')}"
     job_create(token, {
         "nome": result.get("nome", ""),
         "elegivel": result.get("elegivel", None),
         "mensagem": result.get("mensagem_sonho", ""),
         "idioma": normalize_idioma(data),
-        "status": "processing" if photo_bytes else "done",
+        "cidade": data.get("cidade", ""),
+        "nascimento": data.get("nascimento", ""),
+        "prompt_imagem": prompt_img,
+        "has_photo": bool(photo_bytes),
+        "status": "processing",
+        "art_url": f"/api/art-image?token={token}",
     })
     save_lead({**data, "token": token}, result)
     background_tasks.add_task(hubspot_upsert, data, token)
 
     # Geração da arte em background (não trava a resposta).
     if photo_bytes:
-        prompt_img = result.get("prompt_imagem") or \
-            f"Dream life in {data.get('cidade', '')}: {data.get('sonho', '')}"
         background_tasks.add_task(
             _art_job, token, photo_bytes, prompt_img,
+            data.get("nome", ""), data.get("cidade", ""), data.get("nascimento", ""),
+            normalize_idioma(data),
+        )
+    else:
+        background_tasks.add_task(
+            _art_job, token, None, prompt_img,
             data.get("nome", ""), data.get("cidade", ""), data.get("nascimento", ""),
             normalize_idioma(data),
         )
@@ -772,19 +1008,59 @@ async def submit(
     return JSONResponse({"token": token})
 
 
+def _serve_art_response(job: dict) -> Response:
+    """Devolve a arte já existente (GridFS ou arquivo local). Nunca gera aqui."""
+    if job.get("art_file_id"):
+        try:
+            from bson import ObjectId
+            _, fs = get_mongo()
+            data = fs.get(ObjectId(job["art_file_id"])).read()
+            return Response(
+                content=data,
+                media_type="image/png",
+                headers={"Content-Disposition": 'inline; filename="minha-arte-d4u.png"'},
+            )
+        except Exception as e:
+            print(f"[art-image] erro ao ler GridFS: {e}")
+            raise HTTPException(404, "Arte não encontrada.")
+
+    art_url = (job.get("art_url") or "").strip()
+    if art_url.startswith("/static/results/"):
+        path = RESULTS_DIR / art_url.rsplit("/", 1)[-1]
+        if path.is_file():
+            return Response(
+                content=path.read_bytes(),
+                media_type="image/png",
+                headers={"Content-Disposition": 'inline; filename="minha-arte-d4u.png"'},
+            )
+
+    raise HTTPException(404, "Arte não encontrada.")
+
+
 @app.get("/api/art-status")
-async def art_status(token: str):
+async def art_status(token: str, background_tasks: BackgroundTasks):
     token = validate_token(token)
     job = job_get(token)
     if not job:
         raise HTTPException(404, "Link inválido ou expirado.")
+
+    _maybe_start_art_generation(token, job, background_tasks)
+    job = job_get(token) or job
+
+    status = job.get("status", "")
+    art_url = job.get("art_url") or f"/api/art-image?token={token}"
+    if _job_has_art(job):
+        status = "done"
+    elif status != "failed":
+        status = "processing"
+
     # Devolve só o necessário — nunca e-mail/telefone.
     payload = {
         "nome": job.get("nome", ""),
         "elegivel": job.get("elegivel"),
         "mensagem": job.get("mensagem", ""),
-        "status": job.get("status"),
-        "art_url": job.get("art_url"),
+        "status": status,
+        "art_url": None if status == "failed" and not _job_has_art(job) else art_url,
     }
     if job.get("idioma"):
         payload["idioma"] = job["idioma"]
@@ -792,23 +1068,32 @@ async def art_status(token: str):
 
 
 @app.get("/api/art-image")
-async def art_image(token: str):
-    """Serve a arte guardada no GridFS — acesso só com o token (gated)."""
+async def art_image(token: str, background_tasks: BackgroundTasks):
+    """Serve a arte existente. Só gera se ainda não houver nenhuma (sem foto)."""
     token = validate_token(token)
     if not MONGO_ENABLED:
         raise HTTPException(404, "Indisponível.")
     job = job_get(token)
-    if not job or not job.get("art_file_id"):
+    if not job:
         raise HTTPException(404, "Arte não encontrada.")
-    try:
-        from bson import ObjectId
-        _, fs = get_mongo()
-        data = fs.get(ObjectId(job["art_file_id"])).read()
-    except Exception as e:
-        print(f"[art-image] erro: {e}")
+
+    if _job_has_art(job):
+        return _serve_art_response(job)
+
+    if job.get("has_photo") is False and job.get("status") in ("processing", "generating"):
+        raise HTTPException(
+            503,
+            "Arte em geração. Tente novamente em instantes.",
+            headers={"Retry-After": "8"},
+        )
+    if not _needs_art_without_photo(job):
         raise HTTPException(404, "Arte não encontrada.")
-    return Response(content=data, media_type="image/png",
-                    headers={"Content-Disposition": 'inline; filename="minha-arte-d4u.png"'})
+    _maybe_start_art_generation(token, job, background_tasks)
+    raise HTTPException(
+        503,
+        "Arte em geração. Tente novamente em instantes.",
+        headers={"Retry-After": "8"},
+    )
 
 
 @app.get("/arte", response_class=HTMLResponse)
