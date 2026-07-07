@@ -255,7 +255,12 @@ async function poll() {
       else showNoArt();
     }
 
-    if (d.status === 'failed') { showFailed(); return; }
+    if (d.status === 'failed') {
+      const err = d.generation_error ? (' (' + d.generation_error + ')') : '';
+      console.warn('[arte] geração falhou' + err);
+      showFailed();
+      return;
+    }
 
     if (shouldShowArtLoader(d)) {
       if (!_raf) startMosaic();

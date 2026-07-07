@@ -29,6 +29,12 @@ load_dotenv()
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+@app.on_event("startup")
+def _on_startup_resume_art() -> None:
+    """Retoma jobs presos em generating após redeploy."""
+    threading.Thread(target=_resume_stuck_art_jobs, daemon=True, name="art-resume").start()
+
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 
@@ -94,8 +100,8 @@ IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-2")
 # Qualidade: "medium" (mais rápido/barato) ou "high" (mais detalhado/lento).
 IMAGE_QUALITY = os.environ.get("IMAGE_QUALITY", "medium")
 
-# Geração de imagem pode levar vários minutos — retentar se ficar preso.
-STALE_GENERATION = timedelta(minutes=10)
+# Geração de imagem pode levar ~1–3 min — retentar se ficar preso.
+STALE_GENERATION = timedelta(minutes=3)
 
 # Logo real sobreposto na arte (mantém o logo 100% fiel, sem o modelo redesenhá-lo).
 # Usa a versão azul-marinho, que fica legível sobre o badge branco.
@@ -818,10 +824,8 @@ def _needs_art_without_photo(job: dict) -> bool:
         return False
     if job.get("status") == "failed":
         return False
-    if job.get("has_photo") is False:
-        return True
-    # Legado: sem foto marcava status "done" sem arte.
-    return job.get("status") == "done" and not job.get("art_file_id")
+    # has_photo False explícito OU legado (campo ausente / null) sem arte.
+    return job.get("has_photo") is not True
 
 
 def _generation_is_stale(job: dict) -> bool:
@@ -892,9 +896,45 @@ def _enqueue_art_generation(token: str, photo_bytes: Optional[bytes], prompt: st
     if _job_has_art(job_get(token)):
         return
     if not _try_claim_art_generation(token):
+        job = job_get(token)
+        st = job.get("status") if job else "?"
+        print(f"[art-job] claim negado para {token[:8]}… (status={st})")
         return
     print(f"[art-job] enfileirando geração para {token[:8]}… (foto={bool(photo_bytes)})")
     _spawn_art_job(token, photo_bytes, prompt, nome, cidade, nascimento, idioma)
+
+
+def _resume_stuck_art_jobs() -> None:
+    """Após redeploy, retoma jobs sem arte que ficaram presos em generating."""
+    if not MONGO_ENABLED:
+        return
+    try:
+        db, _ = get_mongo()
+        q = {
+            "$or": [
+                {"art_file_id": {"$exists": False}},
+                {"art_file_id": None},
+                {"art_file_id": ""},
+            ],
+            "has_photo": {"$ne": True},
+            "status": {"$in": ["generating", "processing"]},
+        }
+        resumed = 0
+        for doc in db.art_jobs.find(q):
+            job = dict(doc)
+            if not _generation_is_stale(job) or not _needs_art_without_photo(job):
+                continue
+            token = doc["_id"]
+            prompt, nome, cidade, nascimento, idioma = _resolve_art_params(job, token)
+            print(f"[art-job] retomando job preso {str(token)[:8]}…")
+            _enqueue_art_generation(token, None, prompt, nome, cidade, nascimento, idioma)
+            resumed += 1
+            if resumed >= 8:
+                break
+        if resumed:
+            print(f"[art-job] {resumed} job(s) preso(s) reenfileirado(s) no startup")
+    except Exception as e:
+        print(f"[art-job] resume falhou: {e}")
 
 
 def _discard_generated_file(filename: str) -> None:
@@ -969,7 +1009,7 @@ def _art_job(token: str, photo_bytes: Optional[bytes], prompt: str,
         print(f"[art-job] falha ao gerar arte ({token[:8]}…): {e}")
         job = job_get(token)
         if not _job_has_art(job):
-            job_update(token, {"status": "failed"})
+            job_update(token, {"status": "failed", "generation_error": str(e)[:500]})
 
 
 def _maybe_start_art_generation(token: str, job: dict) -> None:
@@ -1122,6 +1162,8 @@ async def art_status(token: str, background_tasks: BackgroundTasks):
     }
     if job.get("idioma"):
         payload["idioma"] = job["idioma"]
+    if job.get("generation_error"):
+        payload["generation_error"] = job["generation_error"]
     return JSONResponse(payload)
 
 
