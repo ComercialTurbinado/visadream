@@ -228,6 +228,10 @@ function showNoArt() {
   document.getElementById('art-block').classList.add('hidden');
 }
 
+function shouldShowArtLoader(d) {
+  return Boolean(d.art_url) || d.status === 'processing' || d.status === 'generating';
+}
+
 function showFailed() {
   stopMosaic();
   document.querySelector('.art-frame').classList.add('hidden');
@@ -247,19 +251,30 @@ async function poll() {
       setPageLang(d.idioma || pageLang);
       renderAnalysis(d);
       show('view-main');
-      if (d.status === 'processing') startMosaic();
+      if (shouldShowArtLoader(d)) startMosaic();
+      else showNoArt();
     }
 
-    if (d.status === 'done' || d.status === 'processing') {
+    if (d.status === 'failed') { showFailed(); return; }
+
+    if (shouldShowArtLoader(d)) {
+      if (!_raf) startMosaic();
       if (d.art_url) {
         const ok = await revealArt(d.art_url);
-        if (ok || d.status === 'done') return;
-      } else if (d.status === 'done') {
+        if (ok) return;
+      }
+      if (d.status === 'done') {
         showNoArt();
         return;
       }
+      setTimeout(poll, 4000);
+      return;
     }
-    if (d.status === 'failed') { showFailed(); return; }
+
+    if (d.status === 'done') {
+      showNoArt();
+      return;
+    }
 
     setTimeout(poll, 4000);
   } catch (e) {

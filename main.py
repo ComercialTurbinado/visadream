@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.error
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Request, Body
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -1008,6 +1008,21 @@ async def submit(
     return JSONResponse({"token": token})
 
 
+def _wants_html_page(request: Request) -> bool:
+    """True quando o cliente é um navegador (não <img src=…> nem fetch de imagem)."""
+    accept = (request.headers.get("accept") or "").lower()
+    if not accept:
+        return False
+    first = accept.split(",")[0].strip()
+    if first.startswith("image/"):
+        return False
+    return "text/html" in accept
+
+
+def _arte_page_url(token: str) -> str:
+    return f"/arte?token={token}"
+
+
 def _serve_art_response(job: dict) -> Response:
     """Devolve a arte já existente (GridFS ou arquivo local). Nunca gera aqui."""
     if job.get("art_file_id"):
@@ -1061,6 +1076,7 @@ async def art_status(token: str, background_tasks: BackgroundTasks):
         "mensagem": job.get("mensagem", ""),
         "status": status,
         "art_url": None if status == "failed" and not _job_has_art(job) else art_url,
+        "page_url": _arte_page_url(token),
     }
     if job.get("idioma"):
         payload["idioma"] = job["idioma"]
@@ -1068,7 +1084,7 @@ async def art_status(token: str, background_tasks: BackgroundTasks):
 
 
 @app.get("/api/art-image")
-async def art_image(token: str, background_tasks: BackgroundTasks):
+async def art_image(token: str, request: Request, background_tasks: BackgroundTasks):
     """Serve a arte existente. Só gera se ainda não houver nenhuma (sem foto)."""
     token = validate_token(token)
     if not MONGO_ENABLED:
@@ -1079,6 +1095,11 @@ async def art_image(token: str, background_tasks: BackgroundTasks):
 
     if _job_has_art(job):
         return _serve_art_response(job)
+
+    # Link aberto no navegador → mesma tela pós-cadastro com mosaic e infos do cliente.
+    if _wants_html_page(request):
+        _maybe_start_art_generation(token, job, background_tasks)
+        return RedirectResponse(url=_arte_page_url(token), status_code=302)
 
     if job.get("has_photo") is False and job.get("status") in ("processing", "generating"):
         raise HTTPException(
