@@ -211,8 +211,18 @@ function formatFieldValue(key, val, lead) {
     return map[val] || val || '—';
   }
   if (key === 'art_url') {
-    if (!val) return '—';
-    return `<a href="${esc(val)}" target="_blank" rel="noopener" class="underline text-amber-200/90 break-all">${esc(val)}</a>`;
+    const token = (lead && lead.token) ? String(lead.token) : '';
+    const base = window.location.origin || 'https://d4u-visadream.dtna1d.easypanel.host';
+    const generatorRel = token ? `/api/art-image?token=${encodeURIComponent(token)}` : '/api/art-image';
+    const generatorFull = generatorRel.startsWith('http') ? generatorRel : base + generatorRel;
+
+    // Se não tiver arte pronta, já mostramos o link de geração (mosaico /arte).
+    const hasArt = Boolean(lead && lead.art_status === 'done' && val);
+    const chosenRel = hasArt ? val : generatorRel;
+    const chosenFull = chosenRel.startsWith('http') ? chosenRel : base + chosenRel;
+    if (!chosenFull) return '—';
+
+    return `<a href="${esc(chosenFull)}" target="_blank" rel="noopener" class="underline text-amber-200/90 break-all">${esc(chosenFull)}</a>`;
   }
   if (Array.isArray(val)) return val.length ? val.map(esc).join(' · ') : '—';
   if (val === null || val === undefined || val === '') return '—';
