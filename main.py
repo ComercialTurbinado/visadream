@@ -50,7 +50,11 @@ async def security_headers(request: Request, call_next):
 
 
 def _client_ip(request: Request) -> str:
-    """IP real do cliente — honra X-Forwarded-For (atrás de proxy/Lightsail/ALB)."""
+    """IP real do cliente. Atrás do Cloudflare o IP verdadeiro vem em CF-Connecting-IP;
+    senão, primeiro item do X-Forwarded-For (proxy/Lightsail/ALB)."""
+    cf = request.headers.get("cf-connecting-ip")
+    if cf:
+        return cf.strip()
     xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[0].strip()
@@ -61,6 +65,11 @@ def _client_ip(request: Request) -> str:
 limiter = Limiter(key_func=_client_ip)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Limite do /api/submit — generoso por padrão (eventos com IP compartilhado + sync da
+# fila offline em lote). Ajustável por env: SUBMIT_RATE_LIMIT="120/minute;2000/hour".
+# O Turnstile é a proteção anti-bot principal.
+SUBMIT_RATE_LIMIT = os.environ.get("SUBMIT_RATE_LIMIT", "120/minute;2000/hour")
 
 
 def verify_turnstile(token: str, remoteip: str = "") -> bool:
@@ -1032,7 +1041,7 @@ async def config():
 
 
 @app.post("/api/submit")
-@limiter.limit("6/minute;40/hour")
+@limiter.limit(SUBMIT_RATE_LIMIT)
 async def submit(
     request: Request,
     background_tasks: BackgroundTasks,
