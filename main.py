@@ -148,7 +148,15 @@ def get_mongo():
         import certifi
         import gridfs
         from pymongo import MongoClient
-        client = MongoClient(MONGODB_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=8000)
+        # Timeouts curtos: se o Atlas não responder (IP não liberado / fora do ar),
+        # falha em ~3s e cai no fallback local — sem travar o request (evita 504/"offline").
+        client = MongoClient(
+            MONGODB_URI,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=3000,
+            connectTimeoutMS=3000,
+            socketTimeoutMS=5000,
+        )
         _mongo_db = client[MONGODB_DB]
         _mongo_fs = gridfs.GridFS(_mongo_db, collection="artes")
     return _mongo_db, _mongo_fs
