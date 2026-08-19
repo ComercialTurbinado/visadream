@@ -145,18 +145,23 @@ def get_mongo():
     """(db, gridfs) com import/conexão tardios. tlsCAFile=certifi resolve o CA do macOS."""
     global _mongo_db, _mongo_fs
     if _mongo_db is None:
-        import certifi
         import gridfs
         from pymongo import MongoClient
-        # Timeouts curtos: se o Atlas não responder (IP não liberado / fora do ar),
-        # falha em ~3s e cai no fallback local — sem travar o request (evita 504/"offline").
-        client = MongoClient(
-            MONGODB_URI,
-            tlsCAFile=certifi.where(),
+        # Timeouts curtos: se o Mongo não responder, falha em ~3s e cai no fallback
+        # local — sem travar o request (evita 504/"offline").
+        kwargs = dict(
             serverSelectionTimeoutMS=3000,
             connectTimeoutMS=3000,
             socketTimeoutMS=5000,
         )
+        # tlsCAFile só faz sentido COM TLS. Atlas (mongodb+srv) usa TLS; Mongo local
+        # (mongodb://…tls=false) não — passar tlsCAFile aí quebra a conexão.
+        uri = MONGODB_URI.lower()
+        use_tls = uri.startswith("mongodb+srv://") or "tls=true" in uri or "ssl=true" in uri
+        if use_tls and "tls=false" not in uri and "ssl=false" not in uri:
+            import certifi
+            kwargs["tlsCAFile"] = certifi.where()
+        client = MongoClient(MONGODB_URI, **kwargs)
         _mongo_db = client[MONGODB_DB]
         _mongo_fs = gridfs.GridFS(_mongo_db, collection="artes")
     return _mongo_db, _mongo_fs
