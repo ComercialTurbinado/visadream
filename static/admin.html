@@ -72,10 +72,37 @@
     <div class="flex items-center gap-3">
       <input type="search" id="search" placeholder="Buscar nome, e-mail, cidade…" class="rounded-xl px-4 py-2 text-sm w-64" autocomplete="off" aria-autocomplete="none"/>
       <button id="btn-csv" class="btn-primary px-4 py-2 rounded-xl text-sm">↓ CSV</button>
+      <button id="btn-mask" class="btn-ghost px-4 py-2 rounded-xl text-sm">🖼️ Máscara</button>
       <button id="btn-refresh" class="btn-ghost px-4 py-2 rounded-xl text-sm">Atualizar</button>
       <button id="btn-logout" class="btn-ghost px-4 py-2 rounded-xl text-sm">Sair</button>
     </div>
   </header>
+
+  <div id="mask-panel" class="hidden max-w-7xl mx-auto px-6 pb-2">
+    <div class="card rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Máscara da arte (moldura)</h2>
+        <button id="mask-close" class="btn-ghost px-3 py-1 rounded-lg text-sm">Fechar</button>
+      </div>
+      <p class="text-gray-400 text-sm mb-4 max-w-2xl">PNG 9:16 com uma <b>janela transparente</b> no centro. Ela é sobreposta na arte depois que a IA a entrega (a arte aparece dentro da janela). Sem máscara, a arte sai com faixas brancas 9:16.</p>
+      <div class="flex flex-wrap gap-8 items-start">
+        <div>
+          <p class="text-gray-400 text-sm mb-2">Máscara atual</p>
+          <img id="mask-current" class="rounded-lg border border-white/10 hidden" style="max-height:300px;background:#0f1626" alt="Máscara atual"/>
+          <p id="mask-none" class="text-gray-500 text-sm hidden">Nenhuma máscara — usando faixas brancas.</p>
+        </div>
+        <div class="space-y-3 min-w-[260px]">
+          <p class="text-gray-400 text-sm">Trocar máscara (PNG transparente)</p>
+          <input type="file" id="mask-file" accept="image/png" class="block text-sm w-full"/>
+          <p id="mask-msg" class="text-sm"></p>
+          <div class="flex flex-wrap gap-3">
+            <button id="mask-save" class="btn-primary px-4 py-2 rounded-xl text-sm">Salvar máscara</button>
+            <button id="mask-remove" class="btn-ghost px-4 py-2 rounded-xl text-sm">Remover (faixas brancas)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <main class="max-w-7xl mx-auto px-6 pb-16">
     <div id="loading" class="text-center py-20 hidden">
@@ -397,6 +424,59 @@ document.getElementById('btn-logout').addEventListener('click', logout);
 document.getElementById('btn-refresh').addEventListener('click', loadLeads);
 document.getElementById('btn-csv').addEventListener('click', downloadCsv);
 document.getElementById('search').addEventListener('input', e => renderTable(filterLeads(e.target.value)));
+
+// ---- Máscara da arte ----
+const maskPanel = document.getElementById('mask-panel');
+function maskMsg(text, kind) {
+  const el = document.getElementById('mask-msg');
+  el.textContent = text || '';
+  el.className = 'text-sm ' + (kind === 'err' ? 'text-red-300' : kind === 'ok' ? 'text-green-300' : 'text-gray-400');
+}
+async function loadMask() {
+  const img = document.getElementById('mask-current');
+  const none = document.getElementById('mask-none');
+  try {
+    const r = await fetch('/api/admin/mask', { headers: authHeaders() });
+    if (r.status === 404) { img.classList.add('hidden'); none.classList.remove('hidden'); return; }
+    if (r.status === 401) { logout(); return; }
+    if (!r.ok) throw new Error(r.status);
+    const blob = await r.blob();
+    if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+    const url = URL.createObjectURL(blob);
+    img.dataset.url = url; img.src = url;
+    img.classList.remove('hidden'); none.classList.add('hidden');
+  } catch (e) { img.classList.add('hidden'); none.classList.remove('hidden'); }
+}
+document.getElementById('btn-mask').addEventListener('click', () => {
+  maskPanel.classList.toggle('hidden');
+  if (!maskPanel.classList.contains('hidden')) { maskMsg(''); loadMask(); }
+});
+document.getElementById('mask-close').addEventListener('click', () => maskPanel.classList.add('hidden'));
+document.getElementById('mask-save').addEventListener('click', async () => {
+  const f = document.getElementById('mask-file').files[0];
+  if (!f) { maskMsg('Escolha um arquivo PNG.', 'err'); return; }
+  const fd = new FormData(); fd.append('mask', f);
+  maskMsg('Enviando…');
+  try {
+    const r = await fetch('/api/admin/mask', { method: 'POST', headers: authHeaders(), body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 401) { logout(); return; }
+    if (!r.ok) throw new Error(d.detail || ('Erro ' + r.status));
+    maskMsg('Máscara atualizada! ✅', 'ok');
+    document.getElementById('mask-file').value = '';
+    loadMask();
+  } catch (e) { maskMsg(e.message, 'err'); }
+});
+document.getElementById('mask-remove').addEventListener('click', async () => {
+  if (!confirm('Remover a máscara? As artes voltam a sair com faixas brancas 9:16.')) return;
+  try {
+    const r = await fetch('/api/admin/mask', { method: 'DELETE', headers: authHeaders() });
+    if (r.status === 401) { logout(); return; }
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    maskMsg('Máscara removida.', 'ok');
+    loadMask();
+  } catch (e) { maskMsg(e.message, 'err'); }
+});
 
 (function init() {
   fetch('/api/admin/status').then(r => r.json()).then(s => {

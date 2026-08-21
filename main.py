@@ -529,6 +529,109 @@ def pad_to_9x16(image_path: Path) -> None:
         print(f"[generate-image] falha ao ajustar 9:16: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Máscara / moldura da arte (overlay aplicado DEPOIS que o gpt entrega a imagem)
+# ---------------------------------------------------------------------------
+MASK_LOCAL_PATH = Path("assets/mask-etapa7.png")
+
+
+def get_mask_bytes() -> bytes | None:
+    """Retorna o PNG da máscara atual (Mongo settings > fallback local). None = sem máscara."""
+    try:
+        if MONGO_ENABLED:
+            db, _ = get_mongo()
+            doc = db["settings"].find_one({"_id": "art_mask"})
+            if doc and doc.get("png"):
+                return bytes(doc["png"])
+    except Exception as e:
+        print(f"[mask] falha ao ler máscara do Mongo: {e}")
+    try:
+        if MASK_LOCAL_PATH.exists():
+            return MASK_LOCAL_PATH.read_bytes()
+    except Exception as e:
+        print(f"[mask] falha ao ler máscara local: {e}")
+    return None
+
+
+def set_mask_bytes(png: bytes) -> None:
+    """Salva a máscara no Mongo (settings) e no arquivo local (fallback/deploy)."""
+    try:
+        MASK_LOCAL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        MASK_LOCAL_PATH.write_bytes(png)
+    except Exception as e:
+        print(f"[mask] falha ao gravar máscara local: {e}")
+    try:
+        if MONGO_ENABLED:
+            db, _ = get_mongo()
+            from bson import Binary
+
+            db["settings"].update_one(
+                {"_id": "art_mask"},
+                {"$set": {"png": Binary(png), "updated_at": datetime.now().isoformat(timespec="seconds")}},
+                upsert=True,
+            )
+    except Exception as e:
+        print(f"[mask] falha ao gravar máscara no Mongo: {e}")
+
+
+def del_mask() -> None:
+    """Remove a máscara — as artes voltam a sair com faixas brancas 9:16."""
+    try:
+        if MONGO_ENABLED:
+            db, _ = get_mongo()
+            db["settings"].delete_one({"_id": "art_mask"})
+    except Exception as e:
+        print(f"[mask] falha ao remover máscara do Mongo: {e}")
+    try:
+        if MASK_LOCAL_PATH.exists():
+            MASK_LOCAL_PATH.unlink()
+    except Exception as e:
+        print(f"[mask] falha ao remover máscara local: {e}")
+
+
+def _mask_window_bbox(mask):
+    """bbox (L,T,R,B) da janela transparente central da máscara. None se não houver."""
+    alpha = mask.split()[3]
+    transparent = alpha.point(lambda p: 255 if p < 20 else 0)
+    return transparent.getbbox()
+
+
+def apply_mask_or_pad(image_path: Path) -> None:
+    """Se houver máscara, compõe a arte dentro da janela transparente e sobrepõe a moldura.
+    Caso contrário, completa para 9:16 com faixas brancas. Falha silenciosa (mantém a arte)."""
+    png = get_mask_bytes()
+    if not png:
+        pad_to_9x16(image_path)
+        return
+    try:
+        import io
+
+        from PIL import Image
+
+        mask = Image.open(io.BytesIO(png)).convert("RGBA")
+        bbox = _mask_window_bbox(mask)
+        if not bbox:
+            print("[mask] máscara sem janela transparente — usando faixas brancas")
+            pad_to_9x16(image_path)
+            return
+        art = Image.open(image_path).convert("RGBA")
+        L, T, R, B = bbox
+        win_w, win_h = R - L, B - T
+        # cover-fit: preenche a janela inteira, corta o excedente centralizado
+        s = max(win_w / art.width, win_h / art.height)
+        art_r = art.resize((round(art.width * s), round(art.height * s)), Image.LANCZOS)
+        cl = (art_r.width - win_w) // 2
+        ct = (art_r.height - win_h) // 2
+        art_c = art_r.crop((cl, ct, cl + win_w, ct + win_h))
+        canvas = Image.new("RGBA", mask.size, (255, 255, 255, 255))
+        canvas.paste(art_c, (L, T))
+        canvas.alpha_composite(mask)
+        canvas.convert("RGB").save(image_path)
+    except Exception as e:
+        print(f"[mask] falha ao aplicar máscara: {e}")
+        pad_to_9x16(image_path)
+
+
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 
@@ -586,7 +689,7 @@ def run_art_generation(photo_bytes: Optional[bytes], prompt: str, nome: str = ""
             f"reflecting that this person is '{zodiac['trait']}' — always positive and inspiring. "
             if zodiac.get("trait") else ""
         )
-        banner_phrase = "D4U, the company that can make my dream come true!"
+        banner_phrase = "D4U, the company that can accelerate my dream!"
         labels_lang = "English"
     else:
         personality_clause = (
@@ -594,7 +697,7 @@ def run_art_generation(photo_bytes: Optional[bytes], prompt: str, nome: str = ""
             f"reflecting that this person is '{zodiac['trait']}' — always positive and inspiring. "
             if zodiac.get("trait") else ""
         )
-        banner_phrase = "D4U, a empresa que pode realizar meu sonho!"
+        banner_phrase = "D4U, a empresa que pode acelerar meu sonho!"
         labels_lang = "Portuguese"
 
     # O logo entra como imagem de referência quando disponível; senão, só no texto do prompt.
@@ -754,7 +857,7 @@ def run_art_generation(photo_bytes: Optional[bytes], prompt: str, nome: str = ""
     else:
         raise HTTPException(500, "Não foi possível obter a imagem gerada.")
 
-    pad_to_9x16(result_path)
+    apply_mask_or_pad(result_path)
 
     return filename
 
@@ -1377,6 +1480,69 @@ async def admin_export_csv(request: Request):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/api/admin/mask")
+@limiter.limit("30/minute")
+async def admin_get_mask(request: Request):
+    """Retorna o PNG da máscara atual (para preview no painel). 404 se não houver."""
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado.")
+    if not verify_admin(request):
+        raise HTTPException(401, "Senha incorreta.")
+    png = get_mask_bytes()
+    if not png:
+        raise HTTPException(404, "Sem máscara configurada.")
+    return Response(content=png, media_type="image/png")
+
+
+@app.post("/api/admin/mask")
+@limiter.limit("10/minute")
+async def admin_set_mask(request: Request, mask: UploadFile = File(...)):
+    """Salva uma nova máscara (PNG transparente com janela central)."""
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado.")
+    if not verify_admin(request):
+        raise HTTPException(401, "Senha incorreta.")
+    data = await mask.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Arquivo muito grande (máx. 8 MB).")
+    try:
+        import io as _io
+
+        from PIL import Image
+
+        im = Image.open(_io.BytesIO(data))
+        im.load()
+        if im.mode != "RGBA":
+            im = im.convert("RGBA")
+        bbox = _mask_window_bbox(im)
+    except Exception:
+        raise HTTPException(400, "Arquivo inválido — envie um PNG.")
+    if not bbox:
+        raise HTTPException(
+            400,
+            "O PNG não tem janela transparente. A máscara precisa de uma área central "
+            "transparente onde a arte aparece.",
+        )
+    # Re-serializa como PNG RGBA (normaliza o formato armazenado)
+    out = io.BytesIO()
+    im.save(out, format="PNG")
+    set_mask_bytes(out.getvalue())
+    w, h = im.size
+    return JSONResponse({"ok": True, "size": [w, h], "window": list(bbox)})
+
+
+@app.delete("/api/admin/mask")
+@limiter.limit("10/minute")
+async def admin_delete_mask(request: Request):
+    """Remove a máscara — as artes voltam a sair com faixas brancas 9:16."""
+    if not ADMIN_PASSWORD:
+        raise HTTPException(503, "Painel admin não configurado.")
+    if not verify_admin(request):
+        raise HTTPException(401, "Senha incorreta.")
+    del_mask()
+    return JSONResponse({"ok": True})
 
 
 if __name__ == "__main__":
