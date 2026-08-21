@@ -936,9 +936,43 @@ function nextFrom4() {
 }
 
 // ── Photo ──────────────────────────────────────────────────────────
-function handleFile(input) {
-  const file = input.files[0];
-  if (!file) return;
+// Redimensiona/comprime a foto no navegador antes de enviar. Evita o 413
+// (corpo grande demais no proxy) e acelera o upload no celular/evento.
+// ~1600px + JPEG 0.85 é mais que suficiente pra caricatura do mural.
+async function resizeImage(file, maxDim = 1600, quality = 0.85) {
+  try {
+    let img = await createImageBitmap(file).catch(() => null);
+    if (!img) {
+      const url = URL.createObjectURL(file);
+      img = await new Promise((res, rej) => {
+        const el = new Image();
+        el.onload = () => res(el);
+        el.onerror = rej;
+        el.src = url;
+      }).catch(() => null);
+      if (!img) return file; // formato que o canvas não decodifica (ex.: HEIC antigo)
+    }
+    const w = img.width, h = img.height;
+    const scale = Math.min(1, maxDim / Math.max(w, h));
+    // Já é pequena e leve? não mexe.
+    if (scale === 1 && file.size <= 1.5 * 1024 * 1024) return file;
+    const cw = Math.round(w * scale), ch = Math.round(h * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+    if (!blob) return file;
+    const name = (file.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], name, { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
+async function handleFile(input) {
+  const original = input.files[0];
+  if (!original) return;
+  const file = await resizeImage(original);
   photoFile = file;
   const reader = new FileReader();
   reader.onload = e => {
